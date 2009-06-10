@@ -57,6 +57,11 @@
 	#include <gmp.h>
 #endif
 
+#ifdef __BIG_ENDIAN__
+#define SwapIfBe32(a) ((uint32_t)((a&0xFF000000)>>24)| ((a&0x00FF0000)>>8) | ((a&0x0000FF00)<<8) | ((a&0xFF)<<24))
+#else
+#define SwapIfBe32(a) (a)
+#endif
 
 static int aocHtoi(int c)
 {
@@ -281,14 +286,33 @@ static char *aocKeyexCrypt(char *key, char *str, int len)
 	for(i=0; i<16; i++)
 		*((char*)&akey+i) = aocHtoi(key[2*i])*16 + aocHtoi(key[2*i+1]);
 
-	for(i=0; i<len/4;)
-	{ 
-		cycle[0] = (*(uint32_t*)(str+4*i++)) ^ (cycle[2]);
-		cycle[1] = (*(uint32_t*)(str+4*i++)) ^ (cycle[3]);
-		aocKeyexTeaEncrypt(cycle, akey);
-		sprintf(p, "%08x%08x", htonl(cycle[2]), htonl(cycle[3]));
-		p += 16;
-	}
+#ifdef __BIG_ENDIAN__
+  for(i = 0; i<4 ; i++)
+  {
+    akey[i] = SwapIfBe32(akey[i]);
+  }
+#endif
+
+		for(i=0; i<len/4;)
+		{
+#ifdef __BIG_ENDIAN__
+	    cycle[0] = (*(uint32_t*)(str+4*i++)) ^ SwapIfBe32(cycle[2]);
+	    cycle[1] = (*(uint32_t*)(str+4*i++)) ^ SwapIfBe32(cycle[3]);
+			cycle[0] = SwapIfBe32(cycle[0]);
+			cycle[1] = SwapIfBe32(cycle[1]);
+#else
+	    cycle[0] = (*(uint32_t*)(str+4*i++)) ^ (cycle[2]);
+	    cycle[1] = (*(uint32_t*)(str+4*i++)) ^ (cycle[3]);
+	#endif
+
+			aocKeyexTeaEncrypt(cycle, akey);
+	#ifdef __BIG_ENDIAN__
+	    sprintf(p, "%08x%08x", SwapIfBe32(cycle[2]), SwapIfBe32(cycle[3]));
+	#else
+	    sprintf(p, "%08x%08x", htonl(cycle[2]), htonl(cycle[3]));
+	#endif
+			p += 16;
+		}
 
 	return crypted;
 }
