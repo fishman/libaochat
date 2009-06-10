@@ -140,10 +140,10 @@
 		"a03dec8e9f105bbad91b3437d8eb73fe2f44159597aa4053cf788d2f9d7012fb" \
 		"8d7c4ce3876f7d6cd5d0c31754f4cd96166708641958de54a6def5657b9f2e92"
 
-#define AOC_SERVER_RK1			"chat2.d1.funcom.com"
-#define AOC_SERVER_RK2			"chat3.d1.funcom.com"
-#define AOC_SERVER_RK3			"chat.dt.funcom.com"
-#define AOC_SERVER_TEST			"chat1.d1.funcom.com"
+#define AOC_SERVER_RK1			"chat.d1.funcom.com"
+#define AOC_SERVER_RK2			"chat.d2.funcom.com"
+#define AOC_SERVER_RK3			"chat.d3.funcom.com"
+#define AOC_SERVER_TEST			"chat.dt.funcom.com"
 
 #define AOC_INVALID_UID			0xFFFFFFFFUL
 #define AOC_MAX_NAME_LEN		15
