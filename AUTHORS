@@ -1,0 +1,6 @@
+libaochat code:
+	Andreas Allerdahl <dinkles@tty0.org>
+
+key exchange code (keyex.c): (slightly modified, read comments in keyex.c)
+	Oskari Saarenmaa <pickett@sumu.org>
+	http://auno.org/ao/chat/

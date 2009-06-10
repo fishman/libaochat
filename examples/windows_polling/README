@@ -1,0 +1,4 @@
+how to manually poll using WSAAsyncSelect() under windows
+
+it's still incomplete though. will update it in teh next release.
+(gotta add timer support)

@@ -1,0 +1,43 @@
+Description of the 5 byte Group IDs used in the chat protocol
+
+
+03xxxxxxxx: Guild Group
+* xxxxxxxx = Guild ID
+* Eg. 0x00171803(=1513475) for Nemesis on RK2
+* http://www.anarchy-online.com/org/stats/d/2/name/1513475
+
+06xxxxyy00: shopping 1-50
+06xxxxyy01: seeking team 1-10
+06xxxxyy02: seeking team 10-20
+06xxxxyy03: seeking team 20-35
+06xxxxyy04: seeking team 35-50
+06xxxxyy05: shopping 50-100
+06xxxxyy06: seeking team 50-70
+06xxxxyy07: seeking team 70-90
+06xxxxyy08: seeking team 90-120
+06xxxxyy09: shopping 100+
+06xxxxyy0a: seeking team 120-150
+06xxxxyy0b: seeking team 150+
+* xxxx     = Dunno? (Usually 0x0776 = 1910, it is always non-zero)
+*     yy   = Faction (0x00 = Neu., 0x01 = Clan, 0x02 = OT)
+
+07000000yy: Neu. Newbie OOC
+07000000yy: Clan Newbie OOC
+07000000yy: OT Newbie OOC
+*       yy = Faction (0x00 = Neu., 0x01 = Clan, 0x02 = OT)
+
+07xxxxyy10: OOC
+07xxxxyy11: Jpn OOC
+* xxxx     = Dunno? (Usually 0x0776 = 1910, it is always non-zero)
+*     yy   = Faction (0x00 = Neu., 0x01 = Clan, 0x02 = OT)
+
+0a00000000: All Towers
+0a00000001: Org. Towers
+0a00000002: Tower Battle Outcome
+
+0c000007d0: IRRK News Wire
+* 000007d0 = Unknown (0x07d0 = 2000)
+
+0c000003e8: Tour Announcements
+* 000003e8 = Unknown (0x03e8 = 1000)
+

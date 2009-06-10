@@ -1,0 +1,4376 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+	<title>libaochat documentation</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+	<link rel="stylesheet" type="text/css" title="Default" href="aochat.css" />
+</head>
+<body>
+
+<div>
+<h1>libaochat documentation</h1>
+<br />
+<br />
+The libaochat library is used to communicate with the Anarchy Online chat servers.<br />
+<br />
+It's features include:<br />
+<ul>
+	<li>Easy to use polling functions</li>
+	<li>Asynchronous socket I/O (except the resolver function)</li>
+	<li>Automatic send queueing</li>
+	<li>Outgoing bandwidth limiting (to make the chat servers happier)</li>
+	<li>Timer functions</li>
+	<li>Stack functions (FIFO and LIFO)</li>
+	<li>Hash table functions designed for fast UserID &lt;-&gt; CharName lookups</li>
+	<li>Lookup table functions designed for GroupID &lt;-&gt; GroupName lookups</li>
+	<li>Per connection event system</li>
+	<li>Various utility functions</li>
+	<li>Cheezy documentation</li>
+</ul>
+Basically all you need to create advanced AO chat clients or bots.<br />
+<br />
+Thanks to Oskari Saarenmaa &lt;pickett at sumu.org&gt; (the <a href="http://auno.org/">http://auno.org/</a> guy) for the login key code. (keyex.c)<br />
+<br />
+<br />
+This documentation is incomplete. The chat protocol is not explained in
+detail, and the description for some functions is incorrect or inadequit.<br />
+If you would like to improve this documentation there is a documentation
+build system tar.gz'ed in the build.tar.gz in the same directory as this
+html file (aochat.html), written in PHP.<br />
+<br />
+<br />
+<h1>Contents</h1><br />
+<table cellspacing='0' cellpadding='2'>
+<tr>
+	<td colspan='3'><h2>Basic Functions</h2></td>
+</tr>
+<tr>
+	<td><a href='#aocConnection'>aocConnection</a> *</td>
+	<td><a href='#aocInit'>aocInit</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocConnect'>aocConnect</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>struct</span> sockaddr_in *addr<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocDisconnect'>aocDisconnect</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocPollArray'>aocPollArray</a></td>
+	<td><b>(</b><span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <span class='ckey'>int</span> num, <a href='#aocConnection'>aocConnection</a> **c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocPollVarArg'>aocPollVarArg</a></td>
+	<td><b>(</b><span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <span class='ckey'>int</span> num, <span class='cnum'>...</span><b>)</b></td>
+</tr>
+<tr>
+	<td><a href='#aocEvent'>aocEvent</a> *</td>
+	<td><a href='#aocEventGet'>aocEventGet</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocEventDestroy'>aocEventDestroy</a></td>
+	<td><b>(</b><a href='#aocEvent'>aocEvent</a> *m<b>)</b></td>
+</tr>
+<tr>
+	<td colspan='3'><h2>Chat Functions</h2></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendLoginResponse'>aocSendLoginResponse</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t _zero, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>const</span> <span class='ckey'>char</span> *key<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendLoginSelectChar'>aocSendLoginSelectChar</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendNameLookup'>aocSendNameLookup</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendPrivateMessage'>aocSendPrivateMessage</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendBuddyAdd'>aocSendBuddyAdd</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendBuddyRemove'>aocSendBuddyRemove</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendOnlineStatus'>aocSendOnlineStatus</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t online<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendPrivateGroupInvite'>aocSendPrivateGroupInvite</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendPrivateGroupKick'>aocSendPrivateGroupKick</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendPrivateGroupJoin'>aocSendPrivateGroupJoin</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendPrivateGroupKickAll'>aocSendPrivateGroupKickAll</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendPrivateGroupMessage'>aocSendPrivateGroupMessage</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendGroupDataset'>aocSendGroupDataset</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, uint16_t flags, uint32_t _unknown<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendGroupMessage'>aocSendGroupMessage</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendGroupClimode'>aocSendGroupClimode</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, uint32_t _unknown1, uint32_t _unknown2, uint32_t _unknown3, uint32_t _unknown4<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendPing'>aocSendPing</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocSendChatCommand'>aocSendChatCommand</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>char</span> *command<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocTellQueueInit'>aocTellQueueInit</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *aoc, <span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <a href='#aocHashList'>aocNameList</a> *namelist<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocTellQueueAdd'>aocTellQueueAdd</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *aoc, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></td>
+</tr>
+<tr>
+	<td colspan='3'><h2>Manual Polling Functions</h2></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocPollQuery'>aocPollQuery</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocPollCanRead'>aocPollCanRead</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocPollCanWrite'>aocPollCanWrite</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocTimerMaxTv'>aocTimerMaxTv</a></td>
+	<td><b>(</b><span class='ckey'>struct</span> timeval *tv<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocTimerPoll'>aocTimerPoll</a></td>
+	<td><b>(</b><b>)</b></td>
+</tr>
+<tr>
+	<td colspan='3'><h2>Hash Table Functions</h2></td>
+</tr>
+<tr>
+	<td><a href='#aocHashTable'>aocHashTable</a> *</td>
+	<td><a href='#aocNameListNew'>aocNameListNew</a></td>
+	<td><b>(</b><span class='ckey'>int</span> size<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocNameListDestroy'>aocNameListDestroy</a></td>
+	<td><b>(</b><a href='#aocHashTable'>aocHashTable</a> *table<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocNameListInsert'>aocNameListInsert</a></td>
+	<td><b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <span class='ckey'>int</span> uid, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>void</span> *data<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> *</td>
+	<td><a href='#aocNameListDeleteByName'>aocNameListDeleteByName</a></td>
+	<td><b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> *</td>
+	<td><a href='#aocNameListDeleteByUID'>aocNameListDeleteByUID</a></td>
+	<td><b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, uint32_t uid<b>)</b></td>
+</tr>
+<tr>
+	<td>uint32_t </td>
+	<td><a href='#aocNameListLookupByName'>aocNameListLookupByName</a></td>
+	<td><b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>void</span> **data<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>char</span> *</td>
+	<td><a href='#aocNameListLookupByUID'>aocNameListLookupByUID</a></td>
+	<td><b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, uint32_t uid, <span class='ckey'>void</span> **data<b>)</b></td>
+</tr>
+<tr>
+	<td><a href='#aocHashNode'>aocHashNode</a> *</td>
+	<td><a href='#aocNameListWalk'>aocNameListWalk</a></td>
+	<td><b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <a href='#aocHashNode'>aocHashNode</a> *node<b>)</b></td>
+</tr>
+<tr>
+	<td colspan='3'><h2>Lookup Table Functions</h2></td>
+</tr>
+<tr>
+	<td><a href='#aocGroupList'>aocGroupList</a> *</td>
+	<td><a href='#aocGroupAdd'>aocGroupAdd</a></td>
+	<td><b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></td>
+</tr>
+<tr>
+	<td><a href='#aocGroupList'>aocGroupList</a> *</td>
+	<td><a href='#aocGroupDelete'>aocGroupDelete</a></td>
+	<td><b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id<b>)</b></td>
+</tr>
+<tr>
+	<td><a href='#aocGroupList'>aocGroupList</a> *</td>
+	<td><a href='#aocGroupDeleteAll'>aocGroupDeleteAll</a></td>
+	<td><b>(</b><a href='#aocGroupList'>aocGroupList</a> *list<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>char</span> *</td>
+	<td><a href='#aocGroupLookupByGID'>aocGroupLookupByGID</a></td>
+	<td><b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *</td>
+	<td><a href='#aocGroupLookupByName'>aocGroupLookupByName</a></td>
+	<td><b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></td>
+</tr>
+<tr>
+	<td colspan='3'><h2>Timer Functions</h2></td>
+</tr>
+<tr>
+	<td><a href='#aocTimer'>aocTimer</a> *</td>
+	<td><a href='#aocTimerNew'>aocTimerNew</a></td>
+	<td><b>(</b><a href='#aocConnection'>aocConnection</a> *aoc, <span class='ckey'>int</span> id, <span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <span class='ckey'>const</span> <span class='ckey'>struct</span> timeval *tv<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocTimerDestroy'>aocTimerDestroy</a></td>
+	<td><b>(</b><a href='#aocTimer'>aocTimer</a> *timer<b>)</b></td>
+</tr>
+<tr>
+	<td colspan='3'><h2>Stack Functions</h2></td>
+</tr>
+<tr>
+	<td><a href='#aocStack'>aocStack</a> *</td>
+	<td><a href='#aocStackNew'>aocStackNew</a></td>
+	<td><b>(</b><span class='ckey'>int</span> type<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocStackDestroy'>aocStackDestroy</a></td>
+	<td><b>(</b><a href='#aocStack'>aocStack</a> *stack<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocStackPush'>aocStackPush</a></td>
+	<td><b>(</b><a href='#aocStack'>aocStack</a> *stack, <span class='ckey'>void</span> *ptr<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> *</td>
+	<td><a href='#aocStackPop'>aocStackPop</a></td>
+	<td><b>(</b><a href='#aocStack'>aocStack</a> *stack<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> *</td>
+	<td><a href='#aocStackPeek'>aocStackPeek</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <a href='#aocStack'>aocStack</a> *stack<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocStackPoke'>aocStackPoke</a></td>
+	<td><b>(</b><a href='#aocStack'>aocStack</a> *stack, <span class='ckey'>void</span> *ptr<b>)</b></td>
+</tr>
+<tr>
+	<td colspan='3'><h2>Utility Functions</h2></td>
+</tr>
+<tr>
+	<td><span class='ckey'>char</span> *</td>
+	<td><a href='#aocKeyexGenerateKey'>aocKeyexGenerateKey</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *servkey, <span class='ckey'>const</span> <span class='ckey'>char</span> *username, <span class='ckey'>const</span> <span class='ckey'>char</span> *password<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocSocketSetAsync'>aocSocketSetAsync</a></td>
+	<td><b>(</b><span class='ckey'>int</span> s<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>struct</span> in_addr *</td>
+	<td><a href='#aocResolveHost'>aocResolveHost</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *host<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>struct</span> sockaddr_in *</td>
+	<td><a href='#aocMakeAddr'>aocMakeAddr</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *host, <span class='ckey'>int</span> port<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocLowerCase'>aocLowerCase</a></td>
+	<td><b>(</b><span class='ckey'>char</span> *str<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>char</span> *</td>
+	<td><a href='#aocNameLowerCase'>aocNameLowerCase</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *str<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>char</span> *</td>
+	<td><a href='#aocNameTrim'>aocNameTrim</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *str<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocRandom'>aocRandom</a></td>
+	<td><b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *buf, <span class='ckey'>int</span> len<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> *</td>
+	<td><a href='#aocMemDup'>aocMemDup</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <span class='ckey'>void</span> *ptr, <span class='ckey'>int</span> len<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocSetPref'>aocSetPref</a></td>
+	<td><b>(</b><span class='ckey'>int</span> prefid, <span class='ckey'>void</span> *value<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *</td>
+	<td><a href='#aocGetColorRGB'>aocGetColorRGB</a></td>
+	<td><b>(</b><span class='ckey'>int</span> color<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>char</span> *</td>
+	<td><a href='#aocServerPacketName'>aocServerPacketName</a></td>
+	<td><b>(</b><span class='ckey'>int</span> type<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>char</span> *</td>
+	<td><a href='#aocClientPacketName'>aocClientPacketName</a></td>
+	<td><b>(</b><span class='ckey'>int</span> type<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocMsgArraySize'>aocMsgArraySize</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <a href='#aocMessage'>aocMessage</a> *msg, <span class='ckey'>int</span> aidx<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> *</td>
+	<td><a href='#aocMsgArrayValue'>aocMsgArrayValue</a></td>
+	<td><b>(</b><span class='ckey'>const</span> <a href='#aocMessage'>aocMessage</a> *msg, <span class='ckey'>int</span> aidx, <span class='ckey'>int</span> idx, <span class='ckey'>int</span> *argt, <span class='ckey'>int</span> *argl<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *</td>
+	<td><a href='#aocStripStyles'>aocStripStyles</a></td>
+	<td><b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *str, <span class='ckey'>int</span> len, <span class='ckey'>int</span> alloc<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocMakeWndBlob'>aocMakeWndBlob</a></td>
+	<td><b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *str, uint32_t len, <span class='ckey'>int</span> is_tell<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocMakeItemBlob'>aocMakeItemBlob</a></td>
+	<td><b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, uint32_t low_id, uint32_t high_id, uint32_t item_ql, <span class='ckey'>int</span> is_tell<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocMakeBlob'>aocMakeBlob</a></td>
+	<td><b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, uint32_t blob_len, uint32_t low_id, uint32_t high_id, uint32_t item_ql, <span class='ckey'>int</span> is_tell<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>int</span> </td>
+	<td><a href='#aocDecodeBlob'>aocDecodeBlob</a></td>
+	<td><b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len, <span class='ckey'>int</span> is_tell, uint32_t *low_id, uint32_t *high_id, uint32_t *item_ql, <span class='ckey'>int</span> *str_len, <span class='ckey'>unsigned</span> <span class='ckey'>char</span> **str<b>)</b></td>
+</tr>
+<tr>
+	<td><span class='ckey'>void</span> </td>
+	<td><a href='#aocFree'>aocFree</a></td>
+	<td><b>(</b><span class='ckey'>void</span> *ptr<b>)</b></td>
+</tr>
+</table>
+<h2>Macros and Constants</h2>
+<div class='indent'>
+<span class='cdef'>#define</span> <a href='#AOC_TV_UDIFF'>AOC_TV_UDIFF</a><b>(</b>a, b<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_TV_CMP'>AOC_TV_CMP</a><b>(</b>a, cmp, b<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_TV_ADD'>AOC_TV_ADD</a><b>(</b>res, a<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_TV_SUB'>AOC_TV_SUB</a><b>(</b>res, a<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_TV_SET'>AOC_TV_SET</a><b>(</b>res, a<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_WRD'>AOC_WRD</a><b>(</b>a<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_INT'>AOC_INT</a><b>(</b>a<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_STR'>AOC_STR</a><b>(</b>a<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_GRP'>AOC_GRP</a><b>(</b>a<b>)</b><br />
+<span class='cdef'>#define</span> <a href='#AOC_COLOR_GREEN'>AOC_COLOR_GREEN</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_COLOR_CYAN'>AOC_COLOR_CYAN</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_COLOR_BLACK'>AOC_COLOR_BLACK</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_COLOR_RED'>AOC_COLOR_RED</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_COLOR_BLUE'>AOC_COLOR_BLUE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_COLOR_WHITE'>AOC_COLOR_WHITE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_COLOR_YELLOW'>AOC_COLOR_YELLOW</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STYLE_COLOR'>AOC_STYLE_COLOR</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STYLE_UL_START'>AOC_STYLE_UL_START</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STYLE_UL_END'>AOC_STYLE_UL_END</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_PREF_DEBUG'>AOC_PREF_DEBUG</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_PREF_BWLIMIT'>AOC_PREF_BWLIMIT</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_PREF_PKEY1'>AOC_PREF_PKEY1</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_PREF_PKEY2'>AOC_PREF_PKEY2</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_PREF_FASTRND'>AOC_PREF_FASTRND</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_PUBLIC_KEY_1'>AOC_PUBLIC_KEY_1</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_PUBLIC_KEY_2'>AOC_PUBLIC_KEY_2</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SERVER_RK1'>AOC_SERVER_RK1</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SERVER_RK2'>AOC_SERVER_RK2</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SERVER_RK3'>AOC_SERVER_RK3</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SERVER_TEST'>AOC_SERVER_TEST</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_INVALID_UID'>AOC_INVALID_UID</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_MAX_NAME_LEN'>AOC_MAX_NAME_LEN</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_GROUP_MUTE'>AOC_GROUP_MUTE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_GROUP_UNMUTE'>AOC_GROUP_UNMUTE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_BUDDY_TEMPORARY'>AOC_BUDDY_TEMPORARY</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_BUDDY_PERMANENT'>AOC_BUDDY_PERMANENT</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STAT_DISCONNECTED'>AOC_STAT_DISCONNECTED</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STAT_CONNECTING'>AOC_STAT_CONNECTING</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STAT_CONNECTED'>AOC_STAT_CONNECTED</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_POLL_READ'>AOC_POLL_READ</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_POLL_WRITE'>AOC_POLL_WRITE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_EVENT_CONNECT'>AOC_EVENT_CONNECT</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_EVENT_CONNFAIL'>AOC_EVENT_CONNFAIL</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_EVENT_DISCONNECT'>AOC_EVENT_DISCONNECT</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_EVENT_MESSAGE'>AOC_EVENT_MESSAGE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_EVENT_UNHANDLED'>AOC_EVENT_UNHANDLED</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_EVENT_TIMER'>AOC_EVENT_TIMER</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_TYPE_WORD'>AOC_TYPE_WORD</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_TYPE_GROUPID'>AOC_TYPE_GROUPID</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_TYPE_ARRAYSIZE'>AOC_TYPE_ARRAYSIZE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STACK_LIFO'>AOC_STACK_LIFO</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_STACK_FIFO'>AOC_STACK_FIFO</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_LOGIN_SEED'>AOC_SRV_LOGIN_SEED</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_LOGIN_OK'>AOC_SRV_LOGIN_OK</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_LOGIN_ERROR'>AOC_SRV_LOGIN_ERROR</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_LOGIN_CHARLIST'>AOC_SRV_LOGIN_CHARLIST</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_CLIENT_UNKNOWN'>AOC_SRV_CLIENT_UNKNOWN</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_CLIENT_NAME'>AOC_SRV_CLIENT_NAME</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_LOOKUP_RESULT'>AOC_SRV_LOOKUP_RESULT</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_USER_FLAGS'>AOC_SRV_USER_FLAGS</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_MSG_PRIVATE'>AOC_SRV_MSG_PRIVATE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_MSG_VICINITY'>AOC_SRV_MSG_VICINITY</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_MSG_ANONVICINITY'>AOC_SRV_MSG_ANONVICINITY</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_MSG_SYSTEM'>AOC_SRV_MSG_SYSTEM</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_BUDDY_STATUS'>AOC_SRV_BUDDY_STATUS</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_BUDDY_REMOVED'>AOC_SRV_BUDDY_REMOVED</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_PRIVGRP_INVITE'>AOC_SRV_PRIVGRP_INVITE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_PRIVGRP_KICK'>AOC_SRV_PRIVGRP_KICK</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_PRIVGRP_PART'>AOC_SRV_PRIVGRP_PART</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_PRIVGRP_CLIJOIN'>AOC_SRV_PRIVGRP_CLIJOIN</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_PRIVGRP_CLIPART'>AOC_SRV_PRIVGRP_CLIPART</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_PRIVGRP_MSG'>AOC_SRV_PRIVGRP_MSG</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_GROUP_JOIN'>AOC_SRV_GROUP_JOIN</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_GROUP_PART'>AOC_SRV_GROUP_PART</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_GROUP_MSG'>AOC_SRV_GROUP_MSG</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_PONG'>AOC_SRV_PONG</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_FORWARD'>AOC_SRV_FORWARD</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_SRV_AMD_MUX_INFO'>AOC_SRV_AMD_MUX_INFO</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_LOGIN_RESPONSE'>AOC_CLI_LOGIN_RESPONSE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_LOGIN_SELCHAR'>AOC_CLI_LOGIN_SELCHAR</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_NAME_LOOKUP'>AOC_CLI_NAME_LOOKUP</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_USER_FLAGS'>AOC_CLI_USER_FLAGS</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_MSG_PRIVATE'>AOC_CLI_MSG_PRIVATE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_BUDDY_ADD'>AOC_CLI_BUDDY_ADD</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_BUDDY_REMOVE'>AOC_CLI_BUDDY_REMOVE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_ONLINE_STATUS'>AOC_CLI_ONLINE_STATUS</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_PRIVGRP_INVITE'>AOC_CLI_PRIVGRP_INVITE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_PRIVGRP_KICK'>AOC_CLI_PRIVGRP_KICK</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_PRIVGRP_JOIN'>AOC_CLI_PRIVGRP_JOIN</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_PRIVGRP_KICKALL'>AOC_CLI_PRIVGRP_KICKALL</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_PRIVGRP_MSG'>AOC_CLI_PRIVGRP_MSG</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_GROUP_DATASET'>AOC_CLI_GROUP_DATASET</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_GROUP_MESSAGE'>AOC_CLI_GROUP_MESSAGE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_GROUP_CLIMODE'>AOC_CLI_GROUP_CLIMODE</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_CLIMODE_GET'>AOC_CLI_CLIMODE_GET</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_CLIMODE_SET'>AOC_CLI_CLIMODE_SET</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_PING'>AOC_CLI_PING</a><br />
+<span class='cdef'>#define</span> <a href='#AOC_CLI_CHAT_COMMAND'>AOC_CLI_CHAT_COMMAND</a><br />
+</div>
+<h2>Structures</h2>
+<div class='indent'>
+<span class='ckey'>struct</span> <a href='#aocTellQueue'>aocTellQueue</a><br />
+<span class='ckey'>struct</span> <a href='#aocTell'>aocTell</a><br />
+<span class='ckey'>struct</span> <a href='#aocConnection'>aocConnection</a><br />
+<span class='ckey'>struct</span> <a href='#aocMessage'>aocMessage</a><br />
+<span class='ckey'>struct</span> <a href='#aocEvent'>aocEvent</a><br />
+<span class='ckey'>struct</span> <a href='#aocEventQueue'>aocEventQueue</a><br />
+<span class='ckey'>struct</span> <a href='#aocPacket'>aocPacket</a><br />
+<span class='ckey'>struct</span> <a href='#aocSendQueue'>aocSendQueue</a><br />
+<span class='ckey'>struct</span> <a href='#aocHashNode'>aocHashNode</a><br />
+<span class='ckey'>struct</span> <a href='#aocHashTable'>aocHashTable</a><br />
+<span class='ckey'>struct</span> <a href='#aocGroupList'>aocGroupList</a><br />
+<span class='ckey'>struct</span> <a href='#aocStack'>aocStack</a><br />
+<span class='ckey'>struct</span> <a href='#aocTimer'>aocTimer</a><br />
+</div>
+
+
+<hr class='separator' />
+
+<div>
+<h1>Basic Functions</h1><br />
+The functions required to establish connections to remote chat servers, poll connections, receive events, and disconnect from chat servers.<br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocInit'></a>
+<div class='funcbar'><a href='#aocConnection'>aocConnection</a> *aocInit<b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Initializes the <a href='#aocConnection'>aocConnection</a> structure passed in the argument <i>c</i>.<br />
+<br />
+If the argument <i>c</i> is NULL, <a href='#aocInit'>aocInit</a> returns a malloc'ed pointer to an initialized <a href='#aocConnection'>aocConnection</a> structure (which you must manually free() later).<br />
+<br />
+Returns NULL on error (out of memory), or the pointer passed in the argument <i>c</i> on success.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>/* <span class='cnum'>3</span> different ways of initializing an <a href='#aocConnection'>aocConnection</a> structure */
+<a href='#aocConnection'>aocConnection</a> aoc1, *aoc2, *aoc3;
+
+<span class='ckey'>if</span><b>(</b><a href='#aocInit'>aocInit</a><b>(</b>&amp;aoc1<b>)</b> == NULL<b>)</b>
+  perror<b>(</b><span class='cstr'>&quot;Meep.&quot;</span><b>)</b>;
+
+aoc2 = malloc<b>(</b>sizeof<b>(</b><a href='#aocConnection'>aocConnection</a><b>)</b><b>)</b>;
+<span class='ckey'>if</span><b>(</b><a href='#aocInit'>aocInit</a><b>(</b>aoc2<b>)</b> == NULL<b>)</b>
+  perror<b>(</b><span class='cstr'>&quot;Meep.&quot;</span><b>)</b>;
+
+<span class='ckey'>if</span><b>(</b><b>(</b>aoc3 = <a href='#aocInit'>aocInit</a><b>(</b>NULL<b>)</b><b>)</b> == NULL<b>)</b>
+  perror<b>(</b><span class='cstr'>&quot;Meep.&quot;</span><b>)</b>;
+
+<a href='#aocDisconnect'>aocDisconnect</a><b>(</b>aoc3<b>)</b>;
+<a href='#aocFree'>aocFree</a><b>(</b>aoc3<b>)</b>;        /* malloc<b>(</b><b>)</b>ed pointers from libaochat
+                         must be freed with <a href='#aocFree'>aocFree</a><b>(</b><b>)</b> !!! */
+<a href='#aocDisconnect'>aocDisconnect</a><b>(</b>aoc2<b>)</b>;
+<a href='#aocDisconnect'>aocDisconnect</a><b>(</b>&amp;aoc1<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocConnect'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocConnect<b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>struct</span> sockaddr_in *addr<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Asynchronously connects to the IP address and port passed in the argument <i>addr</i>.<br />
+<br />
+Returns 0 on failure (<i>errno</i> is set appropriately), 1 on success.<br />
+<br />
+Note that the connection is done <b>asynchronously</b>, meaning that the function returns before a connection has been established.<br />
+The application will receive a <a href='#AOC_EVENT_CONNECT'>AOC_EVENT_CONNECT</a> event when a connection has been established.<br />
+A return value of 0 (failure) means usually means that a socket descriptor could not be allocated, or that the <i>addr</i> argument is NULL.<br />
+<br />
+The <a href='#aocMakeAddr'>aocMakeAddr</a> function makes it easier to create sockaddr_in structures.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocConnection'>aocConnection</a> *aoc;
+stuct sockaddr_in *addr;
+
+addr = <a href='#aocMakeAddr'>aocMakeAddr</a><b>(</b><span class='cstr'>&quot;chat3.d1.funcom.com&quot;</span>, <span class='cnum'>7012</span><b>)</b>;
+<span class='ckey'>if</span><b>(</b>addr == NULL<b>)</b>
+  perror<b>(</b><span class='cstr'>&quot;Could not resolve chat3.d1.funcom.com!&quot;</span><b>)</b>;
+
+aoc = <a href='#aocInit'>aocInit</a><b>(</b>NULL<b>)</b>;
+<span class='ckey'>if</span><b>(</b>!<a href='#aocConnect'>aocConnect</a><b>(</b>aoc, addr<b>)</b><b>)</b>
+{
+  <a href='#aocDisconnect'>aocDisconnect</a><b>(</b>aoc<b>)</b>;
+  <a href='#aocFree'>aocFree</a><b>(</b>aoc<b>)</b>;
+  perror<b>(</b><span class='cstr'>&quot;Aww, crap.&quot;</span><b>)</b>;
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocDisconnect'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocDisconnect<b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Disconnects and uninitializes the <a href='#aocConnection'>aocConnection</a> structure passed in the argument <i>c</i>.<br />
+<br />
+Returns nothing.<br />
+<br />
+This function also destroys all unprocessed events, and timers associated with this connection.<br />
+
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocConnection'>aocConnection</a> *aoc;
+
+aoc = <a href='#aocInit'>aocInit</a><b>(</b>aoc<b>)</b>;
+<a href='#aocDisconnect'>aocDisconnect</a><b>(</b>aoc<b>)</b>;
+free<b>(</b>aoc<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocPollArray'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocPollArray<b>(</b><span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <span class='ckey'>int</span> num, <a href='#aocConnection'>aocConnection</a> **c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Polls an array of connections (<a href='#aocConnection'>aocConnection</a> structures) using select().<br />
+<br />
+The argument <i>sec</i> specifies the maximum number of seconds to wait for something to happen.<br />
+The argument <i>usec</i> specifies the maximum number of microseconds to wait for something to happen.<br />
+The argument <i>num</i> specifies the number of <a href='#aocConnection'>aocConnection</a> structures in the array.<br />
+The argument <i>c</i> is an array of <a href='#aocConnection'>aocConnection</a> structures.<br />
+<br />
+Returns 0 on failure (<i>errno</i> is set appropriately), or 1 on success.<br />
+<br />
+If you are only using 1 or 2 connections, you might find <a href='#aocPollVarArg'>aocPollVarArg</a> much easier to use.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocConnection'>aocConnection</a> aoc[<span class='cnum'>2</span>];
+<span class='ckey'>int</span> n;
+
+for<b>(</b>n=<span class='cnum'>0</span>; n&lt;<span class='cnum'>2</span>; n++<b>)</b>
+{
+  <a href='#aocInit'>aocInit</a><b>(</b>&amp;aoc[n]<b>)</b>;
+  <a href='#aocConnect'>aocConnect</a><b>(</b>&amp;aoc[n]<b>)</b>;
+}
+
+while<b>(</b><span class='cnum'>1</span><b>)</b>
+{
+  <a href='#aocPollArray'>aocPollArray</a><b>(</b><span class='cnum'>1</span>, <span class='cnum'>0</span>, <span class='cnum'>2</span>, aoc<b>)</b>;
+  <span class='cnum'>...</span>
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocPollVarArg'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocPollVarArg<b>(</b><span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <span class='ckey'>int</span> num, <span class='cnum'>...</span><b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Polls a number of connections (<a href='#aocConnection'>aocConnection</a> structures) using select().<br />
+<br />
+The argument <i>sec</i> specifies the maximum number of seconds to wait for something to happen.<br />
+The argument <i>usec</i> specifies the maximum number of microseconds to wait for something to happen.<br />
+The argument <i>num</i> specifies the number of <a href='#aocConnection'>aocConnection</a> structures that follow as arguments.<br />
+The variable argument <i>...</i> can be any number of <a href='#aocConnection'>aocConnection</a> structures.<br />
+<br />
+Returns 0 on failure (<i>errno</i> is set appropriately), or 1 on success.<br />
+<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocConnection'>aocConnection</a> *aoc1, *aoc2;
+
+aoc1 = <a href='#aocInit'>aocInit</a><b>(</b>NULL<b>)</b>;
+<a href='#aocConnect'>aocConnect</a><b>(</b>aoc1<b>)</b>;
+aoc2 = <a href='#aocInit'>aocInit</a><b>(</b>NULL<b>)</b>;
+<a href='#aocConnect'>aocConnect</a><b>(</b>aoc2<b>)</b>;
+
+while<b>(</b><span class='cnum'>1</span><b>)</b>
+{
+  <a href='#aocPollArray'>aocPollArray</a><b>(</b><span class='cnum'>1</span>, <span class='cnum'>0</span>, <span class='cnum'>2</span>, aoc1, aoc2<b>)</b>;
+  <span class='cnum'>...</span>
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocEventGet'></a>
+<div class='funcbar'><a href='#aocEvent'>aocEvent</a> *aocEventGet<b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Gets the next event in the event queue from the connection passed in the argument <i>c</i>.<br />
+<br />
+Returns NULL if there are no more events, or a pointer to an <a href='#aocEvent'>aocEvent</a> structure on success.<br />
+<br />
+The type of event is specified in the <i>type</i> member of the <a href='#aocEvent'>aocEvent</a> structure.<br />
+<br />
+There are 6 types of events:<br />
+<br />
+<div class="indent">
+<b><a href='#AOC_EVENT_CONNECT'>AOC_EVENT_CONNECT</a></b><br />
+Socket has connected to the chat server.<br />
+<br />
+<b><a href='#AOC_EVENT_CONNFAIL'>AOC_EVENT_CONNFAIL</a></b><br />
+Socket failed to connect to the chat server.<br />
+The <i>data</i> member of the <a href='#aocEvent'>aocEvent</a> structure contains the errno value returned by getsockopt().<br />
+
+<br />
+<b><a href='#AOC_EVENT_DISCONNECT'>AOC_EVENT_DISCONNECT</a></b><br />
+Socket has been disconnected from the chat server.<br />
+The <i>data</i> member of the <a href='#aocEvent'>aocEvent</a> structure contains the errno value set by send() or recv().<br />
+<br />
+<b><a href='#AOC_EVENT_MESSAGE'>AOC_EVENT_MESSAGE</a></b><br />
+A complete packet has been received from the chat server and translated into an <a href='#aocMessage'>aocMessage</a> structure.<br />
+
+The <i>data</i> member of the <a href='#aocEvent'>aocEvent</a> structure points to the <a href='#aocMessage'>aocMessage</a> structure. It is guaranteed not to be NULL.<br />
+All members of the <a href='#aocMessage'>aocMessage</a> are guaranteed to be valid. This means that there will be no NULL pointers, and<br />
+all arg* members will correspond with the packet received.<br />
+<br />
+For example if you receive a <a href='#AOC_SRV_MSG_PRIVATE'>AOC_SRV_MSG_PRIVATE</a> message:<br/>
+The <i>argn</i> member will be 3.<br />
+The <i>argt</i> member will be an array of 3 integers: {<a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>, <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>, <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>}<br />
+The <i>argl</i> member will be an array of 3 integers: {4, binary_strlen(argv[1]), binary_strlen(argv[2])}<br />
+The <i>argv</i> member will be an array of 3 pointers: {uint32_t *userid, char *text, char *blob}<br />
+The <i>data</i> member will be a pointer to mangled packet data, don't modify it.<br />
+<br />
+Though argv[1] and argv[2] are pointers to binary data, they are guaranteed to be NULL-terminated.<br />
+<br />
+<b><a href='#AOC_EVENT_UNHANDLED'>AOC_EVENT_UNHANDLED</a></b><br />
+An unknown, unhandled, or invalid packet has been received from the chat server.<br />
+The <i>data</i> member of the <a href='#aocEvent'>aocEvent</a> structure points to a <a href='#aocMessage'>aocMessage</a> structure.<br />
+A pointer to the raw packet data can be found in the <i>data</i> member of the <a href='#aocMessage'>aocMessage</a> structure.<br />
+
+<br />
+<b><a href='#AOC_EVENT_TIMER'>AOC_EVENT_TIMER</a></b><br />
+A timer event has been triggered.<br />
+The <i>data</i> member of the <a href='#aocEvent'>aocEvent</a> structure points to a <a href='#aocTimer'>aocTimer</a> structure.<br />
+<br />
+</div>
+This function should be called after each successful call to <a href='#aocPollArray'>aocPollArray</a> or <a href='#aocPollVarArg'>aocPollVarArg</a>.<br />
+An application should process all events (ie. call this function until it returns NULL), before polling again.<br />
+Processed events should be destroyed by calling the <a href='#aocEventDestroy'>aocEventDestroy</a> function.<br />
+<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocConnection'>aocConnection</a> *aoc;
+<a href='#aocEvent'>aocEvent</a> *event;
+
+<span class='cnum'>...</span>
+
+while<b>(</b><span class='cnum'>1</span><b>)</b>
+{
+  <span class='ckey'>if</span><b>(</b>!<a href='#aocPollVarArg'>aocPollVarArg</a><b>(</b><span class='cnum'>5</span>, <span class='cnum'>0</span>, <span class='cnum'>1</span>, aoc<b>)</b><b>)</b>
+    <span class='ckey'>break</span>;
+
+  while<b>(</b> <b>(</b>event = <a href='#aocEventGet'>aocEventGet</a><b>(</b>aoc<b>)</b><b>)</b> <b>)</b>
+  {
+    <span class='ckey'>switch</span><b>(</b>event-&gt;type<b>)</b>
+    {
+    <span class='ckey'>case</span> <a href='#AOC_EVENT_CONNECT'>AOC_EVENT_CONNECT</a>:
+      printf<b>(</b><span class='cstr'>&quot;Connected to chat server!\n&quot;</span><b>)</b>;
+      <span class='ckey'>break</span>;
+
+    <span class='ckey'>case</span> <a href='#AOC_EVENT_CONNFAIL'>AOC_EVENT_CONNFAIL</a>:
+      printf<b>(</b><span class='cstr'>&quot;Could not connect to chat server! <b>(</b>%s<b>)</b>\n&quot;</span>,
+                strerror<b>(</b> <b>(</b><span class='ckey'>int</span><b>)</b>event-&gt;data <b>)</b><b>)</b>;
+      <a href='#aocEventDestroy'>aocEventDestroy</a><b>(</b>event<b>)</b>;
+      <a href='#aocDisconnect'>aocDisconnect</a><b>(</b>aoc<b>)</b>;
+      exit<b>(</b><span class='cnum'>0</span><b>)</b>;
+      <span class='ckey'>break</span>;
+
+    <span class='ckey'>case</span> <a href='#AOC_EVENT_DISCONNECT'>AOC_EVENT_DISCONNECT</a>:
+      printf<b>(</b><span class='cstr'>&quot;Disconnected from chat server! <b>(</b>%s<b>)</b>\n&quot;</span>,
+                strerror<b>(</b> <b>(</b><span class='ckey'>int</span><b>)</b>event-&gt;data <b>)</b><b>)</b>;
+      <a href='#aocEventDestroy'>aocEventDestroy</a><b>(</b>event<b>)</b>;
+      <a href='#aocDisconnect'>aocDisconnect</a><b>(</b>aoc<b>)</b>;
+      exit<b>(</b><span class='cnum'>0</span><b>)</b>;
+      <span class='ckey'>break</span>;
+
+    <span class='ckey'>case</span> <a href='#AOC_EVENT_MESSAGE'>AOC_EVENT_MESSAGE</a>:
+      handle_message<b>(</b>aoc, <b>(</b><a href='#aocMessage'>aocMessage</a> *<b>)</b>event-&gt;message<b>)</b>;
+      <span class='ckey'>break</span>;
+
+    <span class='ckey'>case</span> <a href='#AOC_EVENT_UNHANDLED'>AOC_EVENT_UNHANDLED</a>:
+      printf<b>(</b><span class='cstr'>&quot;Received an unhandled packet!\n&quot;</span><b>)</b>;
+      /*
+        <span class='ckey'>struct</span> <a href='#aocMessage'>aocMessage</a> *msg = <b>(</b><a href='#aocMessage'>aocMessage</a> *<b>)</b>event-&gt;data;
+
+        *<b>(</b>uint16_t *<b>)</b><b>(</b>msg-&gt;data<b>)</b>   = type of packet
+        *<b>(</b>uint16_t *<b>)</b><b>(</b>msg-&gt;data+<span class='cnum'>2</span><b>)</b> = length of packet body
+        msg-&gt;data                  = raw packet data
+        <b>(</b>total size of msg-&gt;data is: packet_body_size + <span class='cnum'>4</span><b>)</b>
+      */
+      <span class='ckey'>break</span>;
+
+    <span class='ckey'>case</span> <a href='#AOC_EVENT_TIMER'>AOC_EVENT_TIMER</a>:
+      printf<b>(</b><span class='cstr'>&quot;Timer %d triggered! <b>(</b>%d underruns<b>)</b>\n&quot;</span>,
+                <b>(</b><b>(</b><a href='#aocTimer'>aocTimer</a> *<b>)</b>event-&gt;data<b>)</b>-&gt;id,
+                <b>(</b><b>(</b><a href='#aocTimer'>aocTimer</a> *<b>)</b>event-&gt;data<b>)</b>-&gt;underruns<b>)</b>;
+      <span class='ckey'>break</span>;
+    }
+
+    <a href='#aocEventDestroy'>aocEventDestroy</a><b>(</b>event<b>)</b>;
+  }
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocEventDestroy'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocEventDestroy<b>(</b><a href='#aocEvent'>aocEvent</a> *m<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Frees all memory allocated by the event passed in the argument <i>m</i>.<br />
+<br />
+Returns nothing.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocEvent'>aocEvent</a> *event;
+
+<span class='cnum'>...</span>
+
+event = <a href='#aocEventGet'>aocEventGet</a><b>(</b>aoc<b>)</b>;
+
+/* process event here */
+
+<a href='#aocEventDestroy'>aocEventDestroy</a><b>(</b>event<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Chat Functions</h1><br />
+The functions required to communicate with the remote chat server.<br />
+<br />
+All of the chat functions return the same values:<br />
+<br />
+If the packet was successfully sent or queued, the size of the packet is returned.<br />
+If the remote host has closed the connection, 0 is returned, and an AOC_EVENT_DISCONNECT event is sent to the application.<br />
+If there was a fatal error, -1 is returned, errno is set appropriately, and an AOC_EVENT_DISCONNECT event is sent to the application.<br />
+<br />
+An application is not required to check the return value from any of the functions.<br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocSendLoginResponse'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendLoginResponse<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t _zero, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>const</span> <span class='ckey'>char</span> *key<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_LOGIN_RESPONSE'>AOC_CLI_LOGIN_RESPONSE</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>_zero</i> argument should always be zero.<br />
+The argument <i>name</i> is the login name.<br />
+The argument <i>key</i> is the login key. Use the aocKeyexGenerateLoginKey function to generate it.<br />
+<br />
+This packet should only be sent in response to an <a href='#AOC_SRV_LOGIN_SEED'>AOC_SRV_LOGIN_SEED</a> packet.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocKeyexGenerateKey'>aocKeyexGenerateKey</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendLoginSelectChar'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendLoginSelectChar<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_LOGIN_SELCHAR'>AOC_CLI_LOGIN_SELCHAR</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>user_id</i> specifies the UserID of the character you wish to log on.<br />
+<br />
+This packet should only be sent in response to an <a href='#AOC_SRV_LOGIN_CHARLIST'>AOC_SRV_LOGIN_CHARLIST</a> packet, and only once per session.<br />
+(The library prevents you from sending this packet twice.)<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendNameLookup'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendNameLookup<b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_NAME_LOOKUP'>AOC_CLI_NAME_LOOKUP</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>name</i> specifies the character name of which you want to know the UserID.<br />
+<br />
+An <a href='#AOC_SRV_LOOKUP_RESULT'>AOC_SRV_LOOKUP_RESULT</a> packet is sent by the server in reply to this packet.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendPrivateMessage'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendPrivateMessage<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends a <a href='#AOC_CLI_MSG_PRIVATE'>AOC_CLI_MSG_PRIVATE</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>user_id</i> specifies the UserID of the character to which you want to send a private message (also known as a "tell").<br />
+The argument <i>text</i> is the text you want to send.<br />
+The argument <i>text_len</i> is the length of <i>text</i> in bytes. If this value is -1 the library will use strlen(<i>text</i>).<br />
+The argument <i>blob</i> is the blob you want to send.<br />
+The argument <i>blob_len</i> is the length of <i>blob</i> in bytes. If this value is -1 the library will use strlen(<i>blob</i>).<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendBuddyAdd'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendBuddyAdd<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_BUDDY_ADD'>AOC_CLI_BUDDY_ADD</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>user_id</i> specifies the UserID of the character you want to add to your buddy list.<br />
+The argument <i>type</i> specifies a 1 byte string with the value <a href='#AOC_BUDDY_TEMPORARY'>AOC_BUDDY_TEMPORARY</a> or <a href='#AOC_BUDDY_PERMANENT'>AOC_BUDDY_PERMANENT</a>.<br />
+The argument <i>len</i> specifies the length of <i>type</i> in bytes. (usually 1)<br />
+<br />
+An <a href='#AOC_SRV_BUDDY_STATUS'>AOC_SRV_BUDDY_STATUS</a> packet is sent by the server in reply to this packet.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendBuddyRemove'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendBuddyRemove<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_BUDDY_REMOVE'>AOC_CLI_BUDDY_REMOVE</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>user_id</i> specifies the UserID of the character you want to remove from your buddy list.<br />
+<br />
+An <a href='#AOC_SRV_BUDDY_REMOVED'>AOC_SRV_BUDDY_REMOVED</a> packet is sent by the server in reply to this packet.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendOnlineStatus'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendOnlineStatus<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t online<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_ONLINE_STATUS'>AOC_CLI_ONLINE_STATUS</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>online</i> specifies your online status. 0 for BACK, 1 for AFK.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendPrivateGroupInvite'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendPrivateGroupInvite<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_PRIVGRP_INVITE'>AOC_CLI_PRIVGRP_INVITE</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>user_id</i> specifies the UserID of the character you wish to invite to your private group.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendPrivateGroupKick'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendPrivateGroupKick<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends a <a href='#AOC_CLI_PRIVGRP_KICK'>AOC_CLI_PRIVGRP_KICK</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>user_id</i> is the UserID of the character you want to kick from your private group.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendPrivateGroupJoin'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendPrivateGroupJoin<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_PRIVGRP_JOIN'>AOC_CLI_PRIVGRP_JOIN</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>user_id</i> specifies the UserID of the private group owner you wish to join.<br />
+<br />
+Note: You must have been invited (See <a href='#AOC_SRV_PRIVGRP_INVITE'>AOC_SRV_PRIVGRP_INVITE</a>) before you can join someone's private group.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendPrivateGroupKickAll'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendPrivateGroupKickAll<b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_PRIVGRP_KICKALL'>AOC_CLI_PRIVGRP_KICKALL</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendPrivateGroupMessage'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendPrivateGroupMessage<b>(</b><a href='#aocConnection'>aocConnection</a> *c, uint32_t user_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends a <a href='#AOC_CLI_PRIVGRP_MSG'>AOC_CLI_PRIVGRP_MSG</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>text</i> is the text you want to send.<br />
+The argument <i>text_len</i> is the length of <i>text</i> in bytes. If this value is -1 the library will use strlen(<i>text</i>).<br />
+The argument <i>blob</i> is the blob you want to send.<br />
+The argument <i>blob_len</i> is the length of <i>blob</i> in bytes.v If this value is -1 the library will use strlen(<i>blob</i>).<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendGroupDataset'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendGroupDataset<b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, uint16_t flags, uint32_t _unknown<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_GROUP_DATASET'>AOC_CLI_GROUP_DATASET</a> packet.<br />
+<br />
+The arguemtn <i>c</i> specifies the connection.<br />
+The argument <i>flags</i> specifies client and server settings. Setting this to <a href='#AOC_GROUP_MUTE'>AOC_GROUP_MUTE</a> mutes the group, setting it to <a href='#AOC_GROUP_UNMUTE'>AOC_GROUP_UNMUTE</a> unmutes it.<br />
+The argument <i>_unknown</i> argument is unknown. Set to 0.<br />
+<br />
+It is possible that flags is actually an integer (uint32_t), and that _unknown is a 0 length string.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendGroupMessage'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendGroupMessage<b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_GROUP_MESSAGE'>AOC_CLI_GROUP_MESSAGE</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>group_id</i> specifies the GroupID you want to send text to.<br />
+The argument <i>text</i> is the text you want to send.<br />
+The argument <i>text_len</i> is the length of <i>text</i> in bytes. If this value is -1 the library will use strlen(<i>text</i>).<br />
+The argument <i>blob</i> is the blob you want to send.<br />
+The argument <i>blob_len</i> is the length of <i>blob</i> in bytes. If this value is -1 the library will use strlen(<i>blob</i>).<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendGroupClimode'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendGroupClimode<b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, uint32_t _unknown1, uint32_t _unknown2, uint32_t _unknown3, uint32_t _unknown4<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_GROUP_CLIMODE'>AOC_CLI_GROUP_CLIMODE</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>group_id</i> specifies the GroupID.<br />
+The argument <i>_unknown1</i> is unknown.<br />
+The argument <i>_unknown2</i> is unknown.<br />
+The argument <i>_unknown3</i> is unknown.<br />
+The argument <i>_unknown4</i> is unknown.<br />
+<br />
+This message is sent to the server whenever you zone in-game. It is probably not needed for chat-only clients.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendPing'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendPing<b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_PING'>AOC_CLI_PING</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>str</i> can be any string.<br />
+The argument <i>len</i> is the length of <i>str</i> in bytes. If this value is -1 the library will use strlen(<i>str</i>).<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendChatCommand'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocSendChatCommand<b>(</b><a href='#aocConnection'>aocConnection</a> *c, <span class='ckey'>const</span> <span class='ckey'>char</span> *command<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sends an <a href='#AOC_CLI_CHAT_COMMAND'>AOC_CLI_CHAT_COMMAND</a> packet.<br />
+<br />
+The argument <i>c</i> specifies the connection.<br />
+The argument <i>command</i> specifies the command you wish to execute.<br />
+<br />
+Currently 3 commands are implemented on the server:<br />
+<br />
+<div class="indent">
+<b>help</b> [command]<br />
+<b>addbuddy</b> &lt;player&gt;<br />
+<b>rembuddy</b> &lt;player&gt;<br />
+<b>rembuddy</b> ?<br />
+</div>
+<br />
+This is the same as typing /cc <i>command</i> in the Anarchy Online game client.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocSendChatCommand'>aocSendChatCommand</a><b>(</b>aoc, <span class='cstr'>&quot;help addbuddy&quot;</span><b>)</b>;
+<a href='#aocSendChatCommand'>aocSendChatCommand</a><b>(</b>aoc, <span class='cstr'>&quot;help rembuddy&quot;</span><b>)</b>;
+<a href='#aocSendChatCommand'>aocSendChatCommand</a><b>(</b>aoc, <span class='cstr'>&quot;addbuddy n00b&quot;</span><b>)</b>;
+<a href='#aocSendChatCommand'>aocSendChatCommand</a><b>(</b>aoc, <span class='cstr'>&quot;rembuddy n00b&quot;</span><b>)</b>;
+<a href='#aocSendChatCommand'>aocSendChatCommand</a><b>(</b>aoc, <span class='cstr'>&quot;rembuddy ?&quot;</span><b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocTellQueueInit'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocTellQueueInit<b>(</b><a href='#aocConnection'>aocConnection</a> *aoc, <span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <a href='#aocHashList'>aocNameList</a> *namelist<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Initializes a simple tell queue on the specified connection.<br />
+<br />
+The argument <i>aoc</i> specifies the connection.<br />
+The argument <i>sec</i> is the interval in seconds at which to send tells.<br />
+The argument <i>usec</i> is the interval in microseconds at which to send tells.<br />
+The argument <i>namelist</i> is the name list hash table to look up UserIDs in.<br />
+<br />
+Returns 0 on error (out of memory), or 1 on success.<br />
+<br />
+The tell queue will send an <a href='#AOC_CLI_NAME_LOOKUP'>AOC_CLI_NAME_LOOKUP</a> packet if the UserID is not in <i>namelist</i>,
+but it will NOT catch the reply from the server.<br />
+The application must process <a href='#AOC_SRV_LOOKUP_RESULT'>AOC_SRV_LOOKUP_RESULT</a> packets and add the result to <i>namelist</i>
+manually or the tell queue will not work.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocHashList'>aocNameList</a> *namelist;
+
+
+<span class='ckey'>void</span> handle_message<b>(</b><a href='#aocMessage'>aocMessage</a> *msg<b>)</b>
+{
+  <span class='ckey'>switch</span><b>(</b>msg-&gt;type<b>)</b>
+  {
+  /* blah blah */
+  <span class='cnum'>...</span>
+
+  <span class='ckey'>case</span> <a href='#AOC_SRV_MSG_PRIVATE'>AOC_SRV_MSG_PRIVATE</a>:
+    {
+      <span class='ckey'>char</span> *name = <a href='#aocNameListLookupByUID'>aocNameListLookupByUID</a><b>(</b>namelist, <a href='#AOC_INT'>AOC_INT</a><b>(</b>msg-&gt;argv[<span class='cnum'>0</span>]<b>)</b>, NULL<b>)</b>;
+
+      <span class='ckey'>if</span><b>(</b>name != NULL<b>)</b>
+        <a href='#aocTellQueueAdd'>aocTellQueueAdd</a><b>(</b>aoc, name, <span class='cstr'>&quot;hey, what's up?&quot;</span>, -<span class='cnum'>1</span>, <span class='cstr'>&quot;&quot;</span>, <span class='cnum'>1</span><b>)</b>;
+    }
+    <span class='ckey'>break</span>;
+
+  <span class='ckey'>case</span> <a href='#AOC_SRV_CLIENT_NAME'>AOC_SRV_CLIENT_NAME</a>:
+  <span class='ckey'>case</span> <a href='#AOC_SRV_LOOKUP_RESULT'>AOC_SRV_LOOKUP_RESULT</a>:
+    <a href='#aocNameListInsert'>aocNameListInsert</a><b>(</b>namelist, <a href='#AOC_INT'>AOC_INT</a><b>(</b>msg-&gt;argv[<span class='cnum'>0</span>]<b>)</b>,
+            <a href='#AOC_STR'>AOC_STR</a><b>(</b>msg-&gt;argv[<span class='cnum'>1</span>]<b>)</b>, NULL<b>)</b>;
+    <span class='ckey'>break</span>;
+  }
+}
+
+
+<span class='ckey'>int</span> main<b>(</b><b>)</b>
+{
+  <a href='#aocConnection'>aocConnection</a> *aoc = <a href='#aocInit'>aocInit</a><b>(</b>NULL<b>)</b>;
+  <a href='#aocEvent'>aocEvent</a> *event;
+  <span class='ckey'>int</span> i;
+
+  <a href='#aocConnect'>aocConnect</a><b>(</b>aoc, <a href='#aocMakeAddr'>aocMakeAddr</a><b>(</b><a href='#AOC_SERVER_RK2'>AOC_SERVER_RK2</a>, <span class='cnum'>7012</span><b>)</b><b>)</b>;
+  namelist = <a href='#aocNameListNew'>aocNameListNew</a><b>(</b><span class='cnum'>1024</span><b>)</b>;
+  <a href='#aocTellQueueInit'>aocTellQueueInit</a><b>(</b>aoc, <span class='cnum'>2</span>, <span class='cnum'>0</span>, namelist<b>)</b>;
+
+  /* Tells will be sent when you have logged in..
+     so you can add tells to the queue before you've
+     connected to the server.. cool huh? */
+  for<b>(</b>i=<span class='cnum'>0</span>; i&lt;<span class='cnum'>10</span>; i++<b>)</b>
+    <a href='#aocTellQueueAdd'>aocTellQueueAdd</a><b>(</b>aoc, <span class='cstr'>&quot;noob&quot;</span>, <span class='cstr'>&quot;hey noob, what's up?&quot;</span>, -<span class='cnum'>1</span>, <span class='cstr'>&quot;&quot;</span>, <span class='cnum'>1</span><b>)</b>;
+
+  while<b>(</b><span class='cnum'>1</span><b>)</b>
+  {
+    <a href='#aocPollVarArg'>aocPollVarArg</a><b>(</b><span class='cnum'>10</span>, <span class='cnum'>0</span>, <span class='cnum'>1</span>, aoc<b>)</b>;
+
+    while<b>(</b> <b>(</b>event = <a href='#aocEventGet'>aocEventGet</a><b>(</b>aoc<b>)</b><b>)</b> <b>)</b>
+    {
+      <span class='ckey'>if</span><b>(</b>event-&gt;type == <a href='#AOC_EVENT_MESSAGE'>AOC_EVENT_MESSAGE</a><b>)</b>
+        handle_message<b>(</b><b>(</b><a href='#aocMessage'>aocMessage</a> *<b>)</b>event-&gt;data<b>)</b>;
+    }
+  }
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocTellQueueAdd'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocTellQueueAdd<b>(</b><a href='#aocConnection'>aocConnection</a> *aoc, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>const</span> <span class='ckey'>char</span> *text, <span class='ckey'>int</span> text_len, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Adds a tell (private message) to the connection's tell queue.<br />
+<br />
+The argument <i>aoc</i> specifies the connection.<br />
+The argument <i>text</i> is the text you want to send.<br />
+The argument <i>text_len</i> is the length of <i>text</i> in bytes. If this value is -1 the library will use strlen(<i>text</i>).<br />
+The argument <i>blob</i> is the blob you want to send.<br />
+The argument <i>blob_len</i> is the length of <i>blob</i> in bytes.v If this value is -1 the library will use strlen(<i>text</i>).<br />
+<br />
+Returns 0 on error (out of memory), or 1 on success.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocTellQueueInit'>aocTellQueueInit</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Manual Polling Functions</h1><br />
+Functions to use when aocPollArray() and aocPollVarArg() are not sufficient.<br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocPollQuery'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocPollQuery<b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Tell the application which types of events to watch for on a connection socket.<br />
+<br />
+Returns an integer with any of the following flags set:<br />
+<br />
+<div class="indent">
+<b><a href='#AOC_POLL_READ'>AOC_POLL_READ</a></b><br />
+The application should watch if data become available for reading on the socket.<br />
+<br />
+<b><a href='#AOC_POLL_WRITE'>AOC_POLL_WRITE</a></b><br />
+The application should watch to see if it's ok to write to the socket.<br />
+</div>
+<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>/* Including some code from connect.c cause I'm a lazy bastard :P */
+
+<span class='ckey'>int</span> <a href='#aocPollArray'>aocPollArray</a><b>(</b><span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <span class='ckey'>int</span> num, <a href='#aocConnection'>aocConnection</a> **c<b>)</b>
+{
+  fd_set fd_read, fd_write;
+  <span class='ckey'>struct</span> timeval tv;
+  <span class='ckey'>int</span> high = -<span class='cnum'>1</span>, nw = <span class='cnum'>0</span>, n, i, flags = <span class='cnum'>0</span>;
+
+  <span class='ckey'>if</span><b>(</b>c == NULL<b>)</b>
+    <span class='ckey'>return</span> <span class='cnum'>1</span>;
+
+  tv.tv_sec = sec;
+  tv.tv_usec = usec;
+
+  <a href='#aocTimerMaxTv'>aocTimerMaxTv</a><b>(</b>&amp;tv<b>)</b>;
+
+  FD_ZERO<b>(</b>&amp;fd_read<b>)</b>;
+  FD_ZERO<b>(</b>&amp;fd_write<b>)</b>;
+  for<b>(</b>i=<span class='cnum'>0</span>; i&lt;num; i++<b>)</b>
+  {
+    <span class='ckey'>if</span><b>(</b>c[i] == NULL<b>)</b>
+      continue;
+
+    flags = <a href='#aocPollQuery'>aocPollQuery</a><b>(</b>c[i]<b>)</b>;
+
+    <span class='ckey'>if</span><b>(</b>flags &amp; <a href='#AOC_POLL_READ'>AOC_POLL_READ</a><b>)</b>
+    {
+      FD_SET<b>(</b>c[i]-&gt;socket, &amp;fd_read<b>)</b>;
+
+      <span class='ckey'>if</span><b>(</b>c[i]-&gt;socket &gt; high<b>)</b>
+        high = c[i]-&gt;socket;
+    }
+
+    <span class='ckey'>if</span><b>(</b>flags &amp; <a href='#AOC_POLL_WRITE'>AOC_POLL_WRITE</a><b>)</b>
+    {
+      FD_SET<b>(</b>c[i]-&gt;socket, &amp;fd_write<b>)</b>;
+      nw++;
+
+    <span class='ckey'>if</span><b>(</b>c[i]-&gt;socket &gt; high<b>)</b>
+      high = c[i]-&gt;socket;
+    }
+  }
+
+  <span class='ckey'>if</span><b>(</b>nw &gt; <span class='cnum'>0</span><b>)</b>
+    n = select<b>(</b>high+<span class='cnum'>1</span>, &amp;fd_read, &amp;fd_write, NULL, &amp;tv<b>)</b>;
+  else
+    n = select<b>(</b>high+<span class='cnum'>1</span>, &amp;fd_read, NULL, NULL, &amp;tv<b>)</b>;
+
+  <a href='#aocTimerPoll'>aocTimerPoll</a><b>(</b><b>)</b>;
+
+  <span class='ckey'>if</span><b>(</b>n &lt; <span class='cnum'>0</span><b>)</b>
+    <span class='ckey'>return</span> <span class='cnum'>0</span>;
+
+  for<b>(</b>i=<span class='cnum'>0</span>; i&lt;num; i++<b>)</b>
+  {
+    <span class='ckey'>if</span><b>(</b>FD_ISSET<b>(</b>c[i]-&gt;socket, &amp;fd_read<b>)</b><b>)</b>
+      <a href='#aocPollCanRead'>aocPollCanRead</a><b>(</b>c[i]<b>)</b>;
+
+    <span class='ckey'>if</span><b>(</b>FD_ISSET<b>(</b>c[i]-&gt;socket, &amp;fd_write<b>)</b><b>)</b>
+      <a href='#aocPollCanWrite'>aocPollCanWrite</a><b>(</b>c[i]<b>)</b>;
+  }
+
+  <span class='ckey'>return</span> <span class='cnum'>1</span>;
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocPollCanRead'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocPollCanRead<b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Inform the library that data is available for reading on a connection.<br />
+<br />
+Returns nothing.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocPollQuery'>aocPollQuery</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocPollCanWrite'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocPollCanWrite<b>(</b><a href='#aocConnection'>aocConnection</a> *c<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Informs the library that it is possible to write to a connection.<br />
+<br />
+Returns nothing.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocPollQuery'>aocPollQuery</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocTimerMaxTv'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocTimerMaxTv<b>(</b><span class='ckey'>struct</span> timeval *tv<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+If the time specified in <i>tv</i> exceeds the time to the next timer event,
+this function will lower it so that it does not.<br />
+<br />
+Returns nothing.<br />
+<br />
+Should be used on all timeval structs passed to select()
+(or your favorite polling function) when doing manual polling.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocPollQuery'>aocPollQuery</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocTimerPoll'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocTimerPoll<b>(</b><b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Polls the timer queue and generates <a href='#AOC_EVENT_TIMER'>AOC_EVENT_TIMER</a> events.<br />
+<br />
+Returns nothing. <br />
+<br />
+Should be called after each call to select()
+(or your favorite polling function) when doing manual polling.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocPollQuery'>aocPollQuery</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Hash Table Functions</h1><br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocNameListNew'></a>
+<div class='funcbar'><a href='#aocHashTable'>aocHashTable</a> *aocNameListNew<b>(</b><span class='ckey'>int</span> size<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Creates a new hash table.<br />
+<br />
+The argument <i>size</i> specifies the size of the hash table.<br />
+<br />
+Returns a pointer to an <a href='#aocHashList'>aocNameList</a> structure.<br />
+<br />
+Theoretically, lookups will be O(1) (constant time) as long as the number of inserted items is less or equal to the size of the hash table.<br />
+A value of 1000 should be enough in most cases.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocHashList'>aocNameList</a> *name_list;
+<a href='#aocHashNode'>aocHashNode</a> *node;
+uint32_t uid;
+<span class='ckey'>char</span> *name, _name[<span class='cnum'>32</span>];
+
+
+name_list = <a href='#aocNameListNew'>aocNameListNew</a><b>(</b><span class='cnum'>1000</span><b>)</b>;
+
+for<b>(</b>uid=<span class='cnum'>0</span>; uid&lt;<span class='cnum'>50000</span>; uid++<b>)</b>
+{
+  snprintf<b>(</b>_name, <span class='cnum'>32</span>, <span class='cstr'>&quot;MrHex%04x&quot;</span>, <b>(</b><span class='ckey'>int</span><b>)</b>uid<b>)</b>;
+  <a href='#aocNameListInsert'>aocNameListInsert</a><b>(</b>name_list, uid, _name, NULL<b>)</b>;
+}
+
+
+uid = <a href='#aocNameListLookupByName'>aocNameListLookupByName</a><b>(</b>name_list, <span class='cstr'>&quot;MrHex0200&quot;</span>, NULL<b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;CharacterName MrHex0200 has UserID %d.\n&quot;</span>, uid<b>)</b>;
+
+name = <a href='#aocNameListLookupByUID'>aocNameListLookupByUID</a><b>(</b>name_list, <span class='cnum'>12345</span>, NULL<b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;UserID %d has CharacterName %s.\n&quot;</span>, <span class='cnum'>12345</span>, name<b>)</b>;
+
+
+for<b>(</b>uid=<span class='cnum'>0</span>; uid&lt;<span class='cnum'>49990</span>; uid++<b>)</b>
+{
+  snprintf<b>(</b>_name, <span class='cnum'>32</span>, <span class='cstr'>&quot;MrHex%04x&quot;</span>, <b>(</b><span class='ckey'>int</span><b>)</b>uid<b>)</b>;
+  <span class='ckey'>if</span><b>(</b>uid % <span class='cnum'>2</span> == <span class='cnum'>0</span><b>)</b>
+    <a href='#aocNameListDeleteByName'>aocNameListDeleteByName</a><b>(</b>name_list, _name<b>)</b>;
+  else
+    <a href='#aocNameListDeleteByUID'>aocNameListDeleteByUID</a><b>(</b>name_list, uid<b>)</b>;
+}
+
+
+node = <a href='#aocNameListWalk'>aocNameListWalk</a><b>(</b>name_list, NULL<b>)</b>;
+while<b>(</b>node<b>)</b>
+{
+  <span class='ckey'>if</span><b>(</b>node-&gt;which == <span class='cnum'>1</span><b>)</b>
+    printf<b>(</b><span class='cstr'>&quot;%s -&gt; %d\n&quot;</span>, node-&gt;name, <b>(</b><span class='ckey'>int</span><b>)</b>node-&gt;uid<b>)</b>;
+
+  node = <a href='#aocNameListWalk'>aocNameListWalk</a><b>(</b>name_list, node<b>)</b>;
+}
+
+
+<a href='#aocNameListDestroy'>aocNameListDestroy</a><b>(</b>name_list<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameListDestroy'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocNameListDestroy<b>(</b><a href='#aocHashTable'>aocHashTable</a> *table<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Deletes the name list(hash table) passed in the argument <i>table</i>.<br />
+<br />
+Returns nothing.<br />
+<br />
+Note that user supplied data to the aocInsert* functions is NOT freed.<br />
+You must do this manually. How you do this is up to you.<br />
+You might find the <a href='#aocNameListWalk'>aocNameListWalk</a> function useful.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocNameListNew'>aocNameListNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameListInsert'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocNameListInsert<b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <span class='ckey'>int</span> uid, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>void</span> *data<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Inserts a new node into the name list(hash table) passed in the argument <i>table</i>.<br />
+<br />
+The argument <i>uid</i> specifies the UserID to insert. (or any uint32_t value, as long as it is unique)<br />
+The argument <i>name</i> specifies the character name to insert. (or any string as long as it is unique and less than <a href='#AOC_MAX_NAME_LEN'>AOC_MAX_NAME_LEN</a> bytes long)<br />
+The argument <i>data</i> is a user supplied pointer to any data. This can be NULL.<br />
+<br />
+Returns 1 if the node was successfully inserted, or 0 on failure.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocNameListNew'>aocNameListNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameListDeleteByName'></a>
+<div class='funcbar'><span class='ckey'>void</span> *aocNameListDeleteByName<b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Deletes a node from the name list(hash table) passed in the argument <i>table</i>.<br />
+<br />
+The argument <i>name</i> specifies the character name to search for.<br />
+<br />
+Returns a pointer to the user supplied data (if any).<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocNameListNew'>aocNameListNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameListDeleteByUID'></a>
+<div class='funcbar'><span class='ckey'>void</span> *aocNameListDeleteByUID<b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, uint32_t uid<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Deletes a node from the name list(hash table) passed in the argument <i>table</i>.<br />
+<br />
+The argument <i>uid</i> specifies the UserID to search for.<br />
+<br />
+Returns a pointer to the user supplied data (if any).<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocNameListNew'>aocNameListNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameListLookupByName'></a>
+<div class='funcbar'>uint32_t aocNameListLookupByName<b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <span class='ckey'>const</span> <span class='ckey'>char</span> *name, <span class='ckey'>void</span> **data<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Looks up a UserID in the namelist(hash table) passed in the argument <i>table</i>.<br />
+<br />
+The argument <i>name</i> specifies the name to search for.<br />
+The argument <i>data</i> is a pointer to where a pointer to any user supplied data will be written. Set to NULL to ignore.<br />
+<br />
+Returns the UserID of the name on success, or <a href='#AOC_INVALID_UID'>AOC_INVALID_UID</a> if the name was not found.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocNameListNew'>aocNameListNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameListLookupByUID'></a>
+<div class='funcbar'><span class='ckey'>char</span> *aocNameListLookupByUID<b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, uint32_t uid, <span class='ckey'>void</span> **data<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Looks up a character name in the name list(hash table) passed in the argument <i>table</i>.<br />
+<br />
+The argument <i>name</i> specifies the name to search for.<br />
+The argument <i>data</i> is a pointer to where a pointer to any user supplied data will be written. Set to NULL to ignore.<br />
+<br />
+Returns a static pointer to the character name on success, or NULL if the UserID was not found.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocNameListNew'>aocNameListNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameListWalk'></a>
+<div class='funcbar'><a href='#aocHashNode'>aocHashNode</a> *aocNameListWalk<b>(</b><a href='#aocHashTable'>aocHashTable</a> *table, <a href='#aocHashNode'>aocHashNode</a> *node<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Walks the name list(hash table) passed in the argument <i>table</i>.<br />
+<br />
+The argument <i>node</i> should be passed the last node that the function returned, or NULL to start from the first node.<br />
+<br />
+Returns a pointer to an <a href='#aocHashNode'>aocHashNode</a> structure, or NULL if there are no more nodes.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocNameListNew'>aocNameListNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Lookup Table Functions</h1><br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocGroupAdd'></a>
+<div class='funcbar'><a href='#aocGroupList'>aocGroupList</a> *aocGroupAdd<b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Adds a group to the group list passed in the argument <i>list</i>.<br />
+<br />
+If argument <i>list</i> is NULL, a new group list is created.<br />
+The argument <i>group_id</i> specifies the GroupID.<br />
+The argument <i>name</i> specifies the name of the group.<br />
+<br />
+Returns NULL on error and the original group list is left untouched,
+or a <b>new</b> pointer to the group list on success.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>void</span> handle_message<b>(</b><a href='#aocMessage'>aocMessage</a> *msg<b>)</b>
+{
+  static <a href='#aocGroupList'>aocGroupList</a> *list = NULL;
+
+  <span class='ckey'>switch</span><b>(</b>msg-&gt;type<b>)</b>
+  {
+  <span class='ckey'>case</span> <a href='#AOC_SRV_GROUP_JOIN'>AOC_SRV_GROUP_JOIN</a>:
+    {
+      <span class='ckey'>char</span> *group_id = <a href='#AOC_GRP'>AOC_GRP</a><b>(</b>msg-&gt;argv[<span class='cnum'>0</span>]<b>)</b>;
+      <span class='ckey'>char</span> *group_name = <a href='#AOC_STR'>AOC_STR</a><b>(</b>msg-&gt;argv[<span class='cnum'>1</span>]<b>)</b>;
+
+      printf<b>(</b><span class='cstr'>&quot;Joined server group: %s\n&quot;</span>, group_name<b>)</b>;
+      list = <a href='#aocGroupAdd'>aocGroupAdd</a><b>(</b>list, group_id, group_name<b>)</b>;
+      <span class='ckey'>break</span>;
+
+  <span class='ckey'>case</span> <a href='#AOC_SRV_GROUP_PART'>AOC_SRV_GROUP_PART</a>:
+    list = <a href='#aocGroupDelete'>aocGroupDelete</a><b>(</b>list, <a href='#AOC_GRP'>AOC_GRP</a><b>(</b>msg-&gt;argv[<span class='cnum'>0</span>]<b>)</b><b>)</b>;
+    <span class='ckey'>break</span>;
+
+  <span class='ckey'>case</span> <a href='#AOC_SRV_GROUP_MSG'>AOC_SRV_GROUP_MSG</a>:
+    <span class='ckey'>char</span> *group_id = <a href='#AOC_GRP'>AOC_GRP</a><b>(</b>msg-&gt;argv[<span class='cnum'>0</span>]<b>)</b>;
+    <span class='ckey'>char</span> *text = <a href='#AOC_GRP'>AOC_GRP</a><b>(</b>msg-&gt;argv[<span class='cnum'>1</span>]<b>)</b>;
+    <span class='ckey'>char</span> *group_name;
+
+    group_name = <a href='#aocGroupLookupByGID'>aocGroupLookupByGID</a><b>(</b>list, group_id<b>)</b>;
+
+    printf<b>(</b><span class='cstr'>&quot;[%s]: %s\n&quot;</span>,
+          group_name == NULL ? <span class='cstr'>&quot;Unknown&quot;</span> : group_name,
+          text<b>)</b>;
+    <span class='ckey'>break</span>;
+  }
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocGroupDelete'></a>
+<div class='funcbar'><a href='#aocGroupList'>aocGroupList</a> *aocGroupDelete<b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Deletes a group from the group list passed in the argument <i>list</i>.<br />
+<br />
+The argument <i>group_id</i> specifies the GroupID of the group to delete.<br />
+<br />
+Return a <b>new</b> pointer to the group list.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocGroupAdd'>aocGroupAdd</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocGroupDeleteAll'></a>
+<div class='funcbar'><a href='#aocGroupList'>aocGroupList</a> *aocGroupDeleteAll<b>(</b><a href='#aocGroupList'>aocGroupList</a> *list<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Deletes the group list passed in the argument <i>list</i>.<br />
+<br />
+Returns NULL.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocGroupAdd'>aocGroupAdd</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocGroupLookupByGID'></a>
+<div class='funcbar'><span class='ckey'>char</span> *aocGroupLookupByGID<b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *group_id<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Looks up the group name in the group list passed in the argument <i>list</i><br />
+<br />
+The argument <i>group_id</i> specifies the GroupID to look up.<br />
+<br />
+Returns a static pointer to the group's name, or NULL if the GroupID was not found.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocGroupAdd'>aocGroupAdd</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocGroupLookupByName'></a>
+<div class='funcbar'><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *aocGroupLookupByName<b>(</b><a href='#aocGroupList'>aocGroupList</a> *list, <span class='ckey'>const</span> <span class='ckey'>char</span> *name<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Looks up the GroupID in the group list passed in the argument <i>list</i><br />
+<br />
+The argument <i>name</i> specifies the group name to search for.<br />
+<br />
+Returns a static pointer to the group's ID, or NULL if the group name was not found.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocGroupAdd'>aocGroupAdd</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Timer Functions</h1><br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocTimerNew'></a>
+<div class='funcbar'><a href='#aocTimer'>aocTimer</a> *aocTimerNew<b>(</b><a href='#aocConnection'>aocConnection</a> *aoc, <span class='ckey'>int</span> id, <span class='ckey'>long</span> sec, <span class='ckey'>long</span> usec, <span class='ckey'>const</span> <span class='ckey'>struct</span> timeval *tv<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Creates a new timer.<br />
+<br />
+The argument <i>aoc</i> specifies the connection to associate the timer with.<br />
+The argument <i>id</i> is a user specified timer id.<br />
+The argument <i>sec</i> is the interval in seconds.<br />
+The argument <i>usec</i> is the interval in microseconds.<br />
+The argument <i>tv</i> is an optional time alignment value. This can be set to NULL to use the current time.<br />
+<br />
+Returns NULL on failure (out of memory), or a pointer to an <a href='#aocTimer'>aocTimer</a> structure on success.<br />
+<br />
+An application will receive <a href='#AOC_EVENT_TIMER'>AOC_EVENT_TIMER</a> events on the intervals specified when
+the timer was created.<br />
+The <i>data</i> member of the <a href='#aocEvent'>aocEvent</a> structure will point to
+the <a href='#aocTimer'>aocTimer</a> structure that triggered the event.<br />
+The <i>id</i> member of the <a href='#aocTimer'>aocTimer</a> structure is the user specified id.<br />
+The <i>underrun</i> member of the <a href='#aocTimer'>aocTimer</a> structure will indicate the number of
+underruns ("missed" timer events) that have occured since the last triggered event.<br />
+<br />
+A timer may not have an interval smaller than 50000 microseconds.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>struct</span> timeval tv;
+<span class='ckey'>int</span> n;
+
+/* create a timer with the interval <span class='cnum'>1.5</span> seconds */
+<a href='#aocTimerNew'>aocTimerNew</a><b>(</b>aoc, <span class='cnum'>0</span>, <span class='cnum'>1</span>, <span class='cnum'>500000</span>, NULL<b>)</b>;
+
+/* create <span class='cnum'>3</span> timers that tick exactly every second */
+gettimeval<b>(</b>&amp;tv, NULL<b>)</b>;
+tv.tv_usec = <span class='cnum'>0</span>;
+<a href='#aocTimerNew'>aocTimerNew</a><b>(</b>aoc, <span class='cnum'>1</span>, <span class='cnum'>1</span>, <span class='cnum'>0</span>, &amp;tv<b>)</b>;
+<a href='#aocTimerNew'>aocTimerNew</a><b>(</b>aoc, <span class='cnum'>2</span>, <span class='cnum'>1</span>, <span class='cnum'>0</span>, &amp;tv<b>)</b>;
+<a href='#aocTimerNew'>aocTimerNew</a><b>(</b>aoc, <span class='cnum'>3</span>, <span class='cnum'>1</span>, <span class='cnum'>0</span>, &amp;tv<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocTimerDestroy'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocTimerDestroy<b>(</b><a href='#aocTimer'>aocTimer</a> *timer<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Deletes a timer.<br />
+<br />
+The argument <i>timer</i> specifies the timer to delete.<br />
+<br />
+Returns nothing.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Stack Functions</h1><br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocStackNew'></a>
+<div class='funcbar'><a href='#aocStack'>aocStack</a> *aocStackNew<b>(</b><span class='ckey'>int</span> type<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Creates a new stack.<br />
+<br />
+The argument <i>type</i> specifies the type of stack to create.<br />
+<br />
+There are 2 types of stacks:<br />
+<br />
+<div class="indent">
+<b><a href='#AOC_STACK_LIFO'>AOC_STACK_LIFO</a></b><br />
+Last In, First Out.<br />
+<br />
+<b><a href='#AOC_STACK_FIFO'>AOC_STACK_FIFO</a></b><br />
+First In, First Out.<br />
+<br />
+</div>
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><a href='#aocStack'>aocStack</a> *stack;
+<span class='ckey'>char</span> *ptr;
+
+stack = <a href='#aocStackNew'>aocStackNew</a><b>(</b><a href='#AOC_STACK_FIFO'>AOC_STACK_FIFO</a><b>)</b>;
+
+<a href='#aocStackPush'>aocStackPush</a><b>(</b>stack, <span class='cstr'>&quot;Hi.&quot;</span><b>)</b>;
+<a href='#aocStackPush'>aocStackPush</a><b>(</b>stack, <span class='cstr'>&quot;My&quot;</span><b>)</b>;
+<a href='#aocStackPush'>aocStackPush</a><b>(</b>stack, <span class='cstr'>&quot;name&quot;</span><b>)</b>;
+<a href='#aocStackPush'>aocStackPush</a><b>(</b>stack, <span class='cstr'>&quot;is&quot;</span><b>)</b>;
+<a href='#aocStackPush'>aocStackPush</a><b>(</b>stack, <span class='cstr'>&quot;Mr.&quot;</span><b>)</b>;
+<a href='#aocStackPush'>aocStackPush</a><b>(</b>stack, <span class='cstr'>&quot;n00b.&quot;</span><b>)</b>;
+
+while<b>(</b> <b>(</b>ptr = <a href='#aocStackPop'>aocStackPop</a><b>(</b>stack<b>)</b><b>)</b> <b>)</b>
+  printf<b>(</b><span class='cstr'>&quot;%s &quot;</span>, ptr<b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;\n&quot;</span><b>)</b>;
+
+<a href='#aocStackDestroy'>aocStackDestroy</a><b>(</b>stack<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocStackDestroy'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocStackDestroy<b>(</b><a href='#aocStack'>aocStack</a> *stack<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Deletes a stack.<br />
+<br />
+The argument <i>stack</i> specifies the stack to delete.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocStackNew'>aocStackNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocStackPush'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocStackPush<b>(</b><a href='#aocStack'>aocStack</a> *stack, <span class='ckey'>void</span> *ptr<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Pushes a value onto the stack.<br />
+<br />
+The argument <i>stack</i> specifies the stack.<br />
+The argument <i>ptr</i> is the value you want to push onto the stack.<br />
+<br />
+Returns 0 on failure (out of memory), 1 on success.
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocStackNew'>aocStackNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocStackPop'></a>
+<div class='funcbar'><span class='ckey'>void</span> *aocStackPop<b>(</b><a href='#aocStack'>aocStack</a> *stack<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Pops a value off the stack.<br />
+<br />
+The argument <i>stack</i> specifies the stack.<br />
+<br />
+Returns a pointer.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocStackNew'>aocStackNew</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocStackPeek'></a>
+<div class='funcbar'><span class='ckey'>void</span> *aocStackPeek<b>(</b><span class='ckey'>const</span> <a href='#aocStack'>aocStack</a> *stack<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Gets the current value from the stack, but does not remove it from the stack.<br />
+<br />
+Returns a pointer. <br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocStackPoke'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocStackPoke<b>(</b><a href='#aocStack'>aocStack</a> *stack, <span class='ckey'>void</span> *ptr<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sets the current value on the stack, but does not increment the stack pointer.<br />
+<br />
+The argument <i>stack</i> specifies the stack.<br />
+The argument <i>ptr</i> is the new value to set.<br />
+<br />
+Returns nothing.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Utility Functions</h1><br />
+<br /><br />
+</div>
+
+<div>
+<a name='aocKeyexGenerateKey'></a>
+<div class='funcbar'><span class='ckey'>char</span> *aocKeyexGenerateKey<b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *servkey, <span class='ckey'>const</span> <span class='ckey'>char</span> *username, <span class='ckey'>const</span> <span class='ckey'>char</span> *password<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Generates a valid login key using the aochat code from <a href="http://auno.org/aochat/">Auno's Website</a>.<br />
+<br />
+The argument <i>servkey</i> should point to the login seed string received from an <a href='#AOC_SRV_LOGIN_SEED'>AOC_SRV_LOGIN_SEED</a> packet.<br />
+The arguments <i>username</i> and <i>password</i> are self explanatory.<br />
+<br />
+Returns NULL on error, or a malloc'ed pointer to a valid key string on success.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>switch</span><b>(</b>msg-&gt;type<b>)</b>
+{
+<span class='ckey'>case</span> <a href='#AOC_SRV_LOGIN_SEED'>AOC_SRV_LOGIN_SEED</a>:
+  {
+    <span class='ckey'>char</span> *key = <a href='#aocKeyexGenerateKey'>aocKeyexGenerateKey</a><b>(</b><a href='#AOC_STR'>AOC_STR</a><b>(</b>msg-&gt;argv[<span class='cnum'>0</span>]<b>)</b>, <span class='cstr'>&quot;username&quot;</span>, <span class='cstr'>&quot;password&quot;</span><b>)</b>;
+
+    <span class='ckey'>if</span><b>(</b>key == NULL<b>)</b>
+    {
+      printf<b>(</b><span class='cstr'>&quot;Login key generation failed...\n&quot;</span><b>)</b>;
+      <span class='ckey'>break</span>;
+    }
+
+    <a href='#aocSendLoginResponse'>aocSendLoginResponse</a><b>(</b>connection, <span class='cnum'>0</span>, <span class='cstr'>&quot;username&quot;</span>, key<b>)</b>;
+    <a href='#aocFree'>aocFree</a><b>(</b>key<b>)</b>;   /* must be freed with <a href='#aocFree'>aocFree</a><b>(</b><b>)</b> !!! */
+  }
+  <span class='ckey'>break</span>;
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSocketSetAsync'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocSocketSetAsync<b>(</b><span class='ckey'>int</span> s<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sets the non-blocking I/O flag on a socket.<br />
+<br />
+The argument <i>s</i> specifies the socket.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocResolveHost'></a>
+<div class='funcbar'><span class='ckey'>struct</span> in_addr *aocResolveHost<b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *host<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Attempts to resolve a host and store the result in a in_addr structure.<br />
+<br />
+The argument <i>host</i> can be either a hostname or an IPv4 address. (eg. "www.google.com or "127.0.0.1")
+<br />
+Returns a static pointer to an in_addr structure on success, or NULL if the specified host could not be resolved.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMakeAddr'></a>
+<div class='funcbar'><span class='ckey'>struct</span> sockaddr_in *aocMakeAddr<b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *host, <span class='ckey'>int</span> port<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Creates a sockaddr_in structure. (AF_INET)<br />
+<br />
+The argument <i>host</i> specifies the IPv4 address or hostname. (eg. "127.0.0.1" or "www.google.com")<br />
+The argument <i>port</i> specifies the port. (eg. 7012)<br />
+<br />
+Returns a static pointer to a sockaddr_in structure, or NULL if the hostname passed in <i>host</i> could not be reoslved.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocConnect'>aocConnect</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocLowerCase'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocLowerCase<b>(</b><span class='ckey'>char</span> *str<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Converts all upper case characters (A-Z) to lower case characters (a-z) in the string passed in <i>str</i><br />
+<br />
+Returns nothing.<br />
+
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>char</span> buf[<span class='cnum'>32</span>];
+
+strcpy<b>(</b>buf, <span class='cstr'>&quot;Blah BlaH BLaH BLAH&quot;</span><b>)</b>;
+<a href='#aocLowerCase'>aocLowerCase</a><b>(</b>buf<b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;Result: %s\n&quot;</span>, buf<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameLowerCase'></a>
+<div class='funcbar'><span class='ckey'>char</span> *aocNameLowerCase<b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *str<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Turns up to 127 characters (excluding the NULL-terminating character) in the string passed in <i>str</i>, into lower case characters (A-Z -> a-z).<br />
+<br />
+Returns a static pointer to a string.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>char</span> buf[<span class='cnum'>32</span>];
+
+strcpy<b>(</b>buf, <span class='cstr'>&quot;mOoOoOoOoooooOooooo!&quot;</span><b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;Result %s\n&quot;</span>, <a href='#aocNameLowerCase'>aocNameLowerCase</a><b>(</b>buf<b>)</b><b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;Original string is untouched: %s\n&quot;</span>, buf<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocNameTrim'></a>
+<div class='funcbar'><span class='ckey'>char</span> *aocNameTrim<b>(</b><span class='ckey'>const</span> <span class='ckey'>char</span> *str<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Left/right-trims the the string passed in <i>str</i>, and returns up to 127
+bytes excluding the NULL-terminating character.<br />
+<br />
+Returns a static pointer to a string.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>char</span> buf[<span class='cnum'>32</span>];
+
+strcpy<b>(</b>buf, <span class='cstr'>&quot;  trim me   please!   &quot;</span><b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;Result '%s'\n&quot;</span>, <a href='#aocNameTrim'>aocNameTrim</a><b>(</b>buf<b>)</b><b>)</b>;
+printf<b>(</b><span class='cstr'>&quot;Original string is untouched: '%s'\n&quot;</span>, buf<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocRandom'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocRandom<b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *buf, <span class='ckey'>int</span> len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Generates highly random data.<br />
+<br />
+On UNIX systems <a href='#aocRandom'>aocRandom</a> will try to first use the slow but extremely good /dev/random,
+if that fails it will try to use /dev/urandom,
+if that fails it will fall back to moo_trand.<br />
+<br />
+On Windows systems <a href='#aocRandom'>aocRandom</a> will try to first use CryptGenRandom() using the PROV_RSA_FULL provider,
+if that fails it will fall back to moo_trand.<br />
+<br />
+moo_trand is a time based / cpu-speed dependant "pseudo" random generator (designed by me :) that does not require seeding.<br />
+<br />
+<a href='#aocKeyexGenerateKey'>aocKeyexGenerateKey</a>() uses this function to get random numbers.<br />
+It is infinitely better than libc's rand().<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *uber_random = malloc<b>(</b><span class='cnum'>128</span><b>)</b>;
+
+<a href='#aocRandom'>aocRandom</a><b>(</b>uber_random, <span class='cnum'>128</span><b>)</b>;
+
+free<b>(</b>uber_random<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMemDup'></a>
+<div class='funcbar'><span class='ckey'>void</span> *aocMemDup<b>(</b><span class='ckey'>const</span> <span class='ckey'>void</span> *ptr, <span class='ckey'>int</span> len<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Duplicates the memory pointer passed in the argument <i>ptr</i><br />
+<br />
+The argument <i>len</i> specifies the number of bytes to duplicate.<br />
+<br />
+Returns a malloc'ed pointer to the duplicated memory, or NULL if there was an error.<br />
+<br />
+Note: You must use <a href='#aocFree'>aocFree</a>() to free the pointer returned by this function.
+You cannot use free().<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *moo;
+<span class='ckey'>unsigned</span> <span class='ckey'>char</span> *moo_copy;
+<span class='ckey'>int</span> n;
+
+moo = malloc<b>(</b><span class='cnum'>256</span><b>)</b>;
+
+for<b>(</b>n=<span class='cnum'>0</span>; n&lt;<span class='cnum'>256</span>; n++<b>)</b>
+  moo[n] = 'A' + n % <span class='cnum'>26</span>;
+
+moo_copy = <a href='#aocMemDup'>aocMemDup</a><b>(</b>moo, <span class='cnum'>256</span><b>)</b>;
+
+<a href='#aocFree'>aocFree</a><b>(</b>moo_copy<b>)</b>;
+free<b>(</b>moo<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSetPref'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocSetPref<b>(</b><span class='ckey'>int</span> prefid, <span class='ckey'>void</span> *value<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sets various library preferences and options.<br />
+<br />
+The argument <i>prefid</i> specifies the preference or option you wish to change.<br />
+The argument <i>value</i> is the value to set the specified preferences to.<br />
+<br />
+There are currently 5 preferences you can change:<br />
+<br />
+<div class="indent">
+<b><a href='#AOC_PREF_DEBUG'>AOC_PREF_DEBUG</a></b><br />
+Whether or not to allow the library to print out debug messages on stderr.<br />
+<br />
+<b><a href='#AOC_PREF_BWLIMIT'>AOC_PREF_BWLIMIT</a></b><br />
+Sets the outgoing bandwidth limit to <i>value</i> bytes per second, per connection.<br />
+Setting this to 0 disables all bandwidth limiting.<br />
+<br />
+Notes:<br />
+Setting this does NOT affect existing connections, only connections created after setting this preference.<br />
+Enabling this makes the library create an internal timer for each new connection that is created,
+keep this in mind when doing manual polling. You must call the <a href='#aocTimerPoll'>aocTimerPoll</a> and <a href='#aocTimerMaxTv'>aocTimerMaxTv</a> functions
+for bandwidth limiting to work properly.<br />
+<br />
+<b><a href='#AOC_PREF_PKEY1'>AOC_PREF_PKEY1</a></b><br />
+Sets the first public key <a href='#aocKeyexGenerateKey'>aocKeyexGenerateKey</a> will use.<br />
+Setting this to NULL will reset it to the default value. (<a href='#AOC_PUBLIC_KEY_1'>AOC_PUBLIC_KEY_1</a>)<br />
+The value must be a human readable hex string in lower case characters.<br />
+<br />
+<b><a href='#AOC_PREF_PKEY2'>AOC_PREF_PKEY2</a></b><br />
+Sets the first second key <a href='#aocKeyexGenerateKey'>aocKeyexGenerateKey</a> will use.<br />
+Setting this to NULL will reset it to the default value. (<a href='#AOC_PUBLIC_KEY_2'>AOC_PUBLIC_KEY_2</a>)<br />
+The value must be a human readable hex string in lower case characters.<br />
+<br />
+<b><a href='#AOC_PREF_FASTRND'>AOC_PREF_FASTRND</a></b><br />
+If this option is set to 1, <a href='#aocRandom'>aocRandom</a> will not use /dev/random on unix.<br />
+/dev/random can sometimes be extremely slow (eg. when the entropy pool is empty)
+so there are times when you might want to disable it.<br />
+</div>
+<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>/* Disable debug messages on stderr <b>(</b>this is the default<b>)</b> */
+<a href='#aocSetPref'>aocSetPref</a><b>(</b><a href='#AOC_PREF_DEBUG'>AOC_PREF_DEBUG</a>, <b>(</b><span class='ckey'>int</span><b>)</b><span class='cnum'>0</span><b>)</b>;
+
+/* Enable debug messages on stderr */
+<a href='#aocSetPref'>aocSetPref</a><b>(</b><a href='#AOC_PREF_DEBUG'>AOC_PREF_DEBUG</a>, <b>(</b><span class='ckey'>int</span><b>)</b><span class='cnum'>1</span><b>)</b>;
+
+/* Disable bandwidth limiting <b>(</b>this is the default<b>)</b> */
+<a href='#aocSetPref'>aocSetPref</a><b>(</b><a href='#AOC_PREF_BWLIMIT'>AOC_PREF_BWLIMIT</a>, <b>(</b><span class='ckey'>int</span><b>)</b><span class='cnum'>0</span><b>)</b>;
+
+/* Set bandwidth limiting to <span class='cnum'>2048</span> bytes per second */
+<a href='#aocSetPref'>aocSetPref</a><b>(</b><a href='#AOC_PREF_BWLIMIT'>AOC_PREF_BWLIMIT</a>, <b>(</b><span class='ckey'>int</span><b>)</b><span class='cnum'>2048</span><b>)</b>;
+
+/* Use custom public keys <b>(</b>for connecting to chat servers not owned by funcom<b>)</b> */
+<a href='#aocSetPref'>aocSetPref</a><b>(</b><a href='#AOC_PREF_PKEY1'>AOC_PREF_PKEY1</a>, <span class='cstr'>&quot;07&quot;</span><b>)</b>;
+<a href='#aocSetPref'>aocSetPref</a><b>(</b><a href='#AOC_PREF_PKEY2'>AOC_PREF_PKEY2</a>, <span class='cstr'>&quot;0b&quot;</span><b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocGetColorRGB'></a>
+<div class='funcbar'><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *aocGetColorRGB<b>(</b><span class='ckey'>int</span> color<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Maps Anarchy Online color values to RGB values.<br />
+<br />
+Returns a static pointer to an array of 3 unsigned char's matching the RGB values
+of the Anarchy Online color passed in the argument <i>color</i>.<br />
+Returns NULL if the color does not exist, in which case the application should
+use the color purple (0xff, 0x00, 0xff).<br />
+<br />
+Here is a table of all colors and their numbers:<br />
+<table>
+<tr>
+<td style='background: #00FF00'>00</td><td style='background: #30D2FF'>01</td>
+<td style='background: #30D2FF'>02</td><td style='background: #FFFFC9'>03</td>
+<td style='background: #00FFFF'>04</td><td style='background: #FFFF45'>05</td>
+</tr>
+<tr>
+<td style='background: #00A651'>06</td><td style='background: #63E689'>07</td>
+<td style='background: #0FF20B'>08</td><td style='background: #FF0099'>09</td>
+<td style='background: #2299FF'>10</td><td style='background: #000000'>11</td>
+</tr>
+<tr>
+<td style='background: #FF0000'>12</td><td style='background: #00F000'>13</td>
+<td style='background: #0000FF'>14</td><td style='background: #FFFFFF'>15</td>
+<td style='background: #FFFF00'>16</td><td style='background: #CCAA44'>17</td>
+</tr>
+<tr>
+<td style='background: #DDDD44'>18</td><td style='background: #00DD44'>19</td>
+<td style='background: #66AA66'>20</td><td style='background: #FFFFFF'>21</td>
+<td style='background: #9AD5D9'>22</td><td style='background: #FF0000'>23</td>
+</tr>
+<tr>
+<td style='background: #FF0000'>24</td><td style='background: #D9D9D2'>25</td>
+<td style='background: #999926'>26</td><td style='background: #FF7718'>27</td>
+<td style='background: #8CB6FF'>28</td><td style='background: #FFFF00'>29</td>
+</tr>
+<tr>
+<td style='background: #FFE3A1'>30</td><td style='background: #00EE00'>31</td>
+<td style='background: #EEEEEE'>32</td><td style='background: #CCCCCC'>33</td>
+<td style='background: #FF63FF'>34</td><td style='background: #FF8CFC'>50</td>
+</tr>
+<tr>
+<td style='background: #FFFFFF'>51</td><td style='background: #FF61A6'>52</td>
+<td style='background: #6699FF'>53</td><td style='background: #66FF99'>54</td>
+<td style='background: #00F000'>55</td><td style='background: #EEEEEE'>80</td>
+</tr>
+</table>
+(Yes there are alot of duplicate colors...)<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>void</span> PrintRGB<b>(</b><span class='ckey'>int</span> color<b>)</b>
+{
+  <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *rgb;
+
+  rgb = <a href='#aocGetColorRGB'>aocGetColorRGB</a><b>(</b>color<b>)</b>;
+  <span class='ckey'>if</span><b>(</b>rgb == NULL<b>)</b>
+  {
+    printf<b>(</b><span class='cstr'>&quot;No such color: %d\n&quot;</span>, color<b>)</b>;
+    <span class='ckey'>return</span>;
+  }
+
+  printf<b>(</b><span class='cstr'>&quot;Color %d RGB values: %d %d %d\n&quot;</span>,
+        <b>(</b><span class='ckey'>int</span><b>)</b>rgb[<span class='cnum'>0</span>], <b>(</b><span class='ckey'>int</span><b>)</b>rgb[<span class='cnum'>1</span>], <b>(</b><span class='ckey'>int</span><b>)</b>rgb[<span class='cnum'>2</span>]<b>)</b>;
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocServerPacketName'></a>
+<div class='funcbar'><span class='ckey'>char</span> *aocServerPacketName<b>(</b><span class='ckey'>int</span> type<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Describes server packet types.<br />
+<br />
+The argument <i>type</i> is the server packet type to translate.<br />
+<br />
+Returns a static pointer to the name of the packet. (eg. "LOGIN_SEED")<br />
+If the server packet type is unknown, "UNKNOWN_%d" is returned.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>void</span> handle_message<b>(</b><a href='#aocMessage'>aocMessage</a> *msg<b>)</b>
+{
+  printf<b>(</b><span class='cstr'>&quot;Received an AOC_SRV_%s packet!\n&quot;</span>,
+        <a href='#aocServerPacketName'>aocServerPacketName</a><b>(</b>msg-&gt;type<b>)</b><b>)</b>;
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocClientPacketName'></a>
+<div class='funcbar'><span class='ckey'>char</span> *aocClientPacketName<b>(</b><span class='ckey'>int</span> type<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Describes client packet types.<br />
+<br />
+The argument <i>type</i> is the client packet type to translate.<br />
+<br />
+Returns a static pointer to the name of the packet. (eg. "PRIVATE_MSG")<br />
+If the client packet type is unknown, "UNKNOWN_%d" is returned.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>printf<b>(</b><span class='cstr'>&quot;Packet type %d = %s\n&quot;</span>, <span class='cnum'>5</span>,
+      <a href='#aocClientPacketName'>aocClientPacketName</a><b>(</b><span class='cnum'>5</span><b>)</b><b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMsgArraySize'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocMsgArraySize<b>(</b><span class='ckey'>const</span> <a href='#aocMessage'>aocMessage</a> *msg, <span class='ckey'>int</span> aidx<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Counts the number of values in an <a href='#aocMessage'>aocMessage</a> array.<br />
+<br />
+The argument <i>msg</i> specifies the <a href='#aocMessage'>aocMessage</a> structure.<br />
+The argument <i>aidx</i> is the array index.<br />
+<br />
+Returns -1 on failure (<i>aidx</i> out of bounds, no arrays found),
+or the number of items in the specified array on success.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>/*
+  Prints the contents of an <a href='#AOC_SRV_LOGIN_CHARLIST'>AOC_SRV_LOGIN_CHARLIST</a> message, nicely aligned
+
+  There are four arrays in the message:
+  <b>(</b><span class='cnum'>0</span><b>)</b> Array of UserIDs
+  <b>(</b><span class='cnum'>1</span><b>)</b> Array of CharNames
+  <b>(</b><span class='cnum'>2</span><b>)</b> Array of CharLevels
+  <b>(</b><span class='cnum'>3</span><b>)</b> Array of OnlineStatus
+*/
+<span class='ckey'>void</span> print_charlist<b>(</b><a href='#aocMessage'>aocMessage</a> *msg<b>)</b>
+{
+  <span class='ckey'>int</span> nchars, i;
+
+  /*
+    Get the size of the first array, which is the same as
+    the number of characters in the message.
+    <b>(</b>...unless the server is sending you invalid packets<b>)</b>
+  */
+  nchars = <a href='#aocMsgArraySize'>aocMsgArraySize</a><b>(</b>msg, <span class='cnum'>0</span><b>)</b>;
+
+  printf<b>(</b><span class='cstr'>&quot;%d characters available:\n&quot;</span>, nchars<b>)</b>;
+
+  /* Print the list... */
+  for<b>(</b>i=<span class='cnum'>0</span>; i&lt;nchars; i++<b>)</b>
+  {
+    <span class='ckey'>void</span> *user_id, *charname, *level, *online;
+
+    user_id  = <a href='#aocMsgArrayValue'>aocMsgArrayValue</a><b>(</b>msg, <span class='cnum'>0</span>, i, NULL, NULL<b>)</b>;
+    charname = <a href='#aocMsgArrayValue'>aocMsgArrayValue</a><b>(</b>msg, <span class='cnum'>1</span>, i, NULL, NULL<b>)</b>;
+    level    = <a href='#aocMsgArrayValue'>aocMsgArrayValue</a><b>(</b>msg, <span class='cnum'>2</span>, i, NULL, NULL<b>)</b>;
+    online   = <a href='#aocMsgArrayValue'>aocMsgArrayValue</a><b>(</b>msg, <span class='cnum'>3</span>, i, NULL, NULL<b>)</b>;
+
+    printf<b>(</b><span class='cstr'>&quot;%10d %15s %10d %10d\n&quot;</span>,
+            user_id  ? <a href='#AOC_INT'>AOC_INT</a><b>(</b>user_id<b>)</b>  : <a href='#AOC_INVALID_UID'>AOC_INVALID_UID</a>,
+            charname ? <a href='#AOC_STR'>AOC_STR</a><b>(</b>charname<b>)</b> : <span class='cstr'>&quot;-&quot;</span>,
+            level    ? <a href='#AOC_INT'>AOC_INT</a><b>(</b>level<b>)</b>    : <span class='cnum'>0</span>,
+            online   ? <a href='#AOC_INT'>AOC_INT</a><b>(</b>online<b>)</b>   : -<span class='cnum'>1</span><b>)</b>;
+  }
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMsgArrayValue'></a>
+<div class='funcbar'><span class='ckey'>void</span> *aocMsgArrayValue<b>(</b><span class='ckey'>const</span> <a href='#aocMessage'>aocMessage</a> *msg, <span class='ckey'>int</span> aidx, <span class='ckey'>int</span> idx, <span class='ckey'>int</span> *argt, <span class='ckey'>int</span> *argl<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Gets a specific value from an <a href='#aocMessage'>aocMessage</a> array.<br />
+<br />
+The argument <i>msg</i> specifies the <a href='#aocMessage'>aocMessage</a> structure.<br />
+The argument <i>aidx</i> is the array index.<br />
+The argument <i>idx</i> is the value to return.<br />
+The argument <i>argt</i> is a pointer to an integer where the type will be stored. This can be NULL to ignore.<br />
+The argument <i>argl</i> is a pointer to an integer where the length will be stored. This can be NULL to ignore.<br />
+<br />
+Returns NULL on failure (<i>aidx</i> or <i>idx</i> out of bounds, no arrays found),
+or a pointer to the value on success.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre>See example code for <a href='#aocMsgArraySize'>aocMsgArraySize</a>.</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocStripStyles'></a>
+<div class='funcbar'><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *aocStripStyles<b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *str, <span class='ckey'>int</span> len, <span class='ckey'>int</span> alloc<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Removes Anarchy Online color and underline styles from a string.<br />
+<br />
+The argument <i>str</i> specifies the string to remove styles from.<br />
+The argument <i>len</i> specifies the length of <i>str</i> in bytes. If this value is -1 the library will use strlen(<i>str</i>).<br />
+The argument <i>alloc</i> specifies whether or not to malloc() a new string.<br />
+<br />
+If <i>alloc</i> is 0, <i>str</i> is modified, and <i>str</i> is returned.<br />
+If <i>alloc</i> is 1, <i>str</i> is not modified, and a malloc'ed pointer to a stripped string is returned.<br />
+Returns NULL if malloc() fails.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>unsigned</span> <span class='ckey'>char</span> buf[<span class='cnum'>32</span>];
+<span class='ckey'>int</span> len;
+
+len = sprintf<b>(</b><span class='cstr'>&quot;%c%cHello :P %comg underlined text%c\n&quot;</span>,
+        <a href='#AOC_STYLE_COLOR'>AOC_STYLE_COLOR</a>, <a href='#AOC_COLOR_GREEN'>AOC_COLOR_GREEN</a>/* this is <span class='cnum'>0</span> */,
+        <a href='#AOC_STYLE_UL_START'>AOC_STYLE_UL_START</a>, <a href='#AOC_STYLE_UL_END'>AOC_STYLE_UL_END</a><b>)</b>;
+
+<a href='#aocStripStyles'>aocStripStyles</a><b>(</b>buf, len, <span class='cnum'>0</span><b>)</b>;
+
+puts<b>(</b>buf<b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMakeWndBlob'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocMakeWndBlob<b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *str, uint32_t len, <span class='ckey'>int</span> is_tell<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Generates a text window blob header.<br />
+<br />
+The argument <i>blob</i> is a pointer to the memory where a window blob header will be written.<br />
+The argument <i>len</i> is the length of the text in the blob. (Not the size of <i>blob</i>)<br />
+The argument <i>is_tell</i> specifies whether or not to generate a blob that can be used in private messages.<br />
+<br />
+Returns nothing.<br />
+<br />
+Notes:<br />
+<i>blob</i> must be at least 18 bytes large if the window blob is to be used in a private message, 17 bytes if not.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>char</span> blob[<span class='cnum'>100</span>], *charname = <span class='cstr'>&quot;noobert&quot;</span>;
+<span class='ckey'>int</span> len;
+
+len = snprintf<b>(</b>blob + <span class='cnum'>18</span>, sizeof<b>(</b>blob<b>)</b> - <span class='cnum'>18</span>,
+      <span class='cstr'>&quot;Hey there %s,\n&quot;</span>
+      <span class='cstr'>&quot;this is a stupid text window.\n&quot;</span>, charname<b>)</b>;
+<span class='ckey'>if</span><b>(</b>len == -<span class='cnum'>1</span><b>)</b>
+      len = sizeof<b>(</b>blob<b>)</b> - <span class='cnum'>18</span>;
+
+<a href='#aocMakeWndBlob'>aocMakeWndBlob</a><b>(</b>blob, len, <span class='cnum'>1</span><b>)</b>;
+
+<a href='#aocTellQueueAdd'>aocTellQueueAdd</a><b>(</b>aoc, charname,
+      <span class='cstr'>&quot;\021This be a text window\022&quot;</span>, -<span class='cnum'>1</span>,
+      blob, len + <span class='cnum'>18</span><b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMakeItemBlob'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocMakeItemBlob<b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, uint32_t low_id, uint32_t high_id, uint32_t item_ql, <span class='ckey'>int</span> is_tell<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Generates an item ref blob.<br />
+<br />
+The argument <i>blob</i> is a pointer to the memory where the item ref blob will be written.<br />
+The argument <i>low_id</i> specifies the low ID of the item.<br />
+The argument <i>high_id</i> specifies the high ID of the item.<br />
+The argument <i>item_ql</i> specifies the QL of the item.
+The argument <i>is_tell</i> specifies whether or not to generate a blob that can be used in private messages.<br />
+<br />
+Returns nothing.<br />
+<br />
+Notes:<br />
+<i>blob</i> must be at 18 bytes large for private message blobs, 17 bytes for all other blobs.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>char</span> blob[<span class='cnum'>18</span>];
+
+<a href='#aocMakeItemBlob'>aocMakeItemBlob</a><b>(</b>blob, <span class='cnum'>123456</span>, <span class='cnum'>123457</span>, <span class='cnum'>200</span>, <span class='cnum'>1</span><b>)</b>;
+
+<a href='#aocTellQueueAdd'>aocTellQueueAdd</a><b>(</b>aoc, <span class='cstr'>&quot;noobert&quot;</span>,
+      <span class='cstr'>&quot;\021Uber Item Ref\022&quot;</span>, -<span class='cnum'>1</span>,
+      blob, <span class='cnum'>18</span><b>)</b>;</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMakeBlob'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocMakeBlob<b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, uint32_t blob_len, uint32_t low_id, uint32_t high_id, uint32_t item_ql, <span class='ckey'>int</span> is_tell<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Used by <a href='#aocMakeWndBlob'>aocMakeWndBlob</a> and <a href='#aocMakeItemBlob'>aocMakeItemBlob</a>.
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocDecodeBlob'></a>
+<div class='funcbar'><span class='ckey'>int</span> aocDecodeBlob<b>(</b><span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob, <span class='ckey'>int</span> blob_len, <span class='ckey'>int</span> is_tell, uint32_t *low_id, uint32_t *high_id, uint32_t *item_ql, <span class='ckey'>int</span> *str_len, <span class='ckey'>unsigned</span> <span class='ckey'>char</span> **str<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Decodes blobs.<br />
+<br />
+The argument <i>blob</i> is a pointer to the blob data to decode.<br />
+The argument <i>blob_len</i> specifies the length of <i>blob</i> in bytes.<br />
+The argument <i>is_tell</i> specifies whether or not the blob is a private message blob.<br />
+The argument <i>low_id</i> is a pointer to where the low id will be written.<br />
+The argument <i>high_id</i> is a pointer to where the high id will be written.<br />
+The argument <i>item_ql</i> is a pointer to where the item ql will be written.<br />
+The argument <i>str</i> is a pointer to where a pointer to the string data of the blob will be written.<br />
+The argument <i>str_len</i> is a pointer to where the length of <i>str</i> will be written.<br />
+<br />
+Returns 0 if the blob is invalid, or 1 on success.<br />
+<br />
+Notes:<br />
+<i>str</i> is NOT null-terminated.<br />
+<br />
+<div class='codebar'><b>Example Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>case</span> AOC_SRV_GROUPMSG:
+{
+  <span class='ckey'>char</span> *str;
+  uint32_t low_id, high_id, item_ql, str_len;
+
+  <span class='ckey'>if</span><b>(</b>! <a href='#aocDecodeBlob'>aocDecodeBlob</a><b>(</b>msg-&gt;argv[<span class='cnum'>2</span>], msg-&gt;argl[<span class='cnum'>2</span>], <span class='cnum'>0</span>,
+          &amp;low_id, &amp;igh_id, &amp;item_ql, &amp;str, &amp;str_len<b>)</b><b>)</b>
+  {
+    printf<b>(</b><span class='cstr'>&quot;Invalid or no blob received in group message.\n&quot;</span><b>)</b>;
+  }
+  else
+  {
+    <span class='ckey'>if</span><b>(</b>low_id == <span class='cnum'>50000</span><b>)</b>
+    {
+      printf<b>(</b><span class='cstr'>&quot;Text blob received:\n&quot;</span><b>)</b>;
+      fwrite<b>(</b>str, str_len, <span class='cnum'>1</span>, stdout<b>)</b>;
+      puts<b>(</b><span class='cstr'>&quot;&quot;</span><b>)</b>;
+    }
+    else
+    {
+      printf<b>(</b><span class='cstr'>&quot;Item blob received: LowID=%d HighID=%d ItemQL=%d\n&quot;</span>,
+          <b>(</b><span class='ckey'>int</span><b>)</b>low_id, <b>(</b><span class='ckey'>int</span><b>)</b>high_id, <b>(</b><span class='ckey'>int</span><b>)</b>item_ql<b>)</b>;
+    }
+  }
+}</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocFree'></a>
+<div class='funcbar'><span class='ckey'>void</span> aocFree<b>(</b><span class='ckey'>void</span> *ptr<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Free's a memory pointer returned by libaochat.<br />
+<br />
+Returns nothing.<br />
+<br />
+Pointers returned by <a href='#aocKeyexGenerateKey'>aocKeyexGenerateKey</a>(...) and <a href='#aocInit'>aocInit</a>(NULL) must be
+free'd with this function, not with free().<br />
+Using free() can corrupt your heap.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Macros and constants</h1><br />
+<br />
+</div>
+
+<div>
+<a name='AOC_TV_UDIFF'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TV_UDIFF<b>(</b>a, b<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Returns the difference between the timeval structures <i>a</i> and <i>b</i> in microseconds.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TV_CMP'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TV_CMP<b>(</b>a, cmp, b<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Compares the timeval structures <i>a</i> and <i>b</i>.<br />
+<br />
+The argument <i>cmp</i> can be either &lt;, ==, or &gt;.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TV_ADD'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TV_ADD<b>(</b>res, a<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Adds the timeval structure <i>a</i> to the timeval structure <i>res</i><br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TV_SUB'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TV_SUB<b>(</b>res, a<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Subtracts the timeval structure <i>a</i> from the timeval structure <i>res</i>
+and stores the result in <i>res</i>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TV_SET'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TV_SET<b>(</b>res, a<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Sets the timeval structure <i>res</i> to the value of the timeval structure <i>a</i>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_WRD'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_WRD<b>(</b>a<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Typecasts the pointer <i>a</i> to a uint16_t. (Unsigned 16bit integer)<br />
+<br />
+Useful when converting argument values in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_INT'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_INT<b>(</b>a<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Typecasts the pointer <i>a</i> to a uint32_t. (Unsigned 32bit integer)<br />
+<br />
+Useful when converting argument values in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STR'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STR<b>(</b>a<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Typecasts the pointer <i>a</i> to char *. (Signed string pointer)<br />
+<br />
+Useful when converting argument values in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_GRP'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_GRP<b>(</b>a<b>)</b></div>
+<div class='brk'></div>
+<div class='funcinf'>
+Typecasts the pointer <i>a</i> to an unsigned char *. (5 character GroupID)<br />
+<br />
+Useful when converting argument values in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_COLOR_GREEN'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_COLOR_GREEN <span class='cnum'>0</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Anarchy Online color index for the color green.<br />
+Pass as an argument to <a href='#aocGetColorRGB'>aocGetColorRGB</a> to translate into RGB values.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_COLOR_CYAN'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_COLOR_CYAN <span class='cnum'>4</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Anarchy Online color index for the color cyan.<br />
+Pass as an argument to <a href='#aocGetColorRGB'>aocGetColorRGB</a> to translate into RGB values.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_COLOR_BLACK'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_COLOR_BLACK <span class='cnum'>11</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Anarchy Online color index for the color black.<br />
+Pass as an argument to <a href='#aocGetColorRGB'>aocGetColorRGB</a> to translate into RGB values.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_COLOR_RED'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_COLOR_RED <span class='cnum'>12</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Anarchy Online color index for the color red.<br />
+Pass as an argument to <a href='#aocGetColorRGB'>aocGetColorRGB</a> to translate into RGB values.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_COLOR_BLUE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_COLOR_BLUE <span class='cnum'>14</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Anarchy Online color index for the color blue.<br />
+Pass as an argument to <a href='#aocGetColorRGB'>aocGetColorRGB</a> to translate into RGB values.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_COLOR_WHITE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_COLOR_WHITE <span class='cnum'>15</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Anarchy Online color index for the color white.<br />
+Pass as an argument to <a href='#aocGetColorRGB'>aocGetColorRGB</a> to translate into RGB values.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_COLOR_YELLOW'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_COLOR_YELLOW <span class='cnum'>16</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Anarchy Online color index for the color yellow.<br />
+Pass as an argument to <a href='#aocGetColorRGB'>aocGetColorRGB</a> to translate into RGB values.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STYLE_COLOR'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STYLE_COLOR <span class='cnum'>0x10</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Byte constant indicating that the following byte is the color to be used. Used in in-game text strings and text window blobs.<br />
+For example: sprintf(text, "%c%cred and %c%cblue", <a href='#AOC_STYLE_COLOR'>AOC_STYLE_COLOR</a>, <a href='#AOC_COLOR_RED'>AOC_COLOR_RED</a>, <a href='#AOC_STYLE_COLOR'>AOC_STYLE_COLOR</a>, <a href='#AOC_COLOR_BLUE'>AOC_COLOR_BLUE</a>);<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STYLE_UL_START'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STYLE_UL_START <span class='cnum'>0x11</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Byte constant indicating the start of an underlined link. Used in in-game text strings and text window blobs.<br />
+For example: sprintf(text, "Click this %cunclickable link%c.", <a href='#AOC_STYLE_UL_START'>AOC_STYLE_UL_START</a>, <a href='#AOC_STYLE_UL_END'>AOC_STYLE_UL_END</a>);<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STYLE_UL_END'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STYLE_UL_END <span class='cnum'>0x12</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Byte constant indicating the end of an underlined link. Used in in-game text strings and text window blobs.<br />
+For example: sprintf(text, "Click this %cunclickable link%c.", <a href='#AOC_STYLE_UL_START'>AOC_STYLE_UL_START</a>, <a href='#AOC_STYLE_UL_END'>AOC_STYLE_UL_END</a>);<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_PREF_DEBUG'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_PREF_DEBUG <span class='cnum'>0</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Debugging preference identifier. Used as an argument to <a href='#aocSetPref'>aocSetPref</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_PREF_BWLIMIT'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_PREF_BWLIMIT <span class='cnum'>1</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Outgoing bandwidth preference identifier. Used as an argument to <a href='#aocSetPref'>aocSetPref</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_PREF_PKEY1'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_PREF_PKEY1 <span class='cnum'>2</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Public key #1 preference identifier. Used as an argument to <a href='#aocSetPref'>aocSetPref</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_PREF_PKEY2'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_PREF_PKEY2 <span class='cnum'>3</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Public key #2 preference identifier. Used as an argument to <a href='#aocSetPref'>aocSetPref</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_PREF_FASTRND'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_PREF_FASTRND <span class='cnum'>4</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<a href='#aocRandom'>aocRandom</a>  preference identifier. Used as an argument to <a href='#aocSetPref'>aocSetPref</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_PUBLIC_KEY_1'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_PUBLIC_KEY_1</div>
+<div class='brk'></div>
+<div class='funcinf'>
+A human readable hex string containing Anarchy Online's Public Key #1.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_PUBLIC_KEY_2'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_PUBLIC_KEY_2</div>
+<div class='brk'></div>
+<div class='funcinf'>
+A human readable hex string containing Anarchy Online's Public Key #2.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SERVER_RK1'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SERVER_RK1 <span class='cstr'>&quot;chat2.d1.funcom.com&quot;</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+The hostname of Anarchy Online's Rubi-Ka 1 (Atlantean) server.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SERVER_RK2'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SERVER_RK2 <span class='cstr'>&quot;chat3.d1.funcom.com&quot;</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+The hostname of Anarchy Online's Rubi-Ka 2 (Rimor) server.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SERVER_RK3'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SERVER_RK3 <span class='cstr'>&quot;chat.dt.funcom.com&quot;</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+The hostname of Anarchy Online's Rubi-Ka 3 (Die Neue Welt) server.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SERVER_TEST'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SERVER_TEST <span class='cstr'>&quot;chat1.d1.funcom.com&quot;</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+The hostname of Anarchy Online's test server.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_INVALID_UID'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_INVALID_UID 0xFFFFFFFFUL </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Invalid UserID.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_MAX_NAME_LEN'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_MAX_NAME_LEN <span class='cnum'>15</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+The maximum length of a character name, excluding the NULL-terminating character.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_GROUP_MUTE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_GROUP_MUTE <span class='cnum'>0x0000</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Group mute flag. Used in AOC_*_GROUP_* packets and as an argument to <a href='#aocSendGroupDataset'>aocSendGroupDataset</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_GROUP_UNMUTE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_GROUP_UNMUTE <span class='cnum'>0x0101</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Group unmute flag. Used in AOC_*_GROUP_* packets and as an argument to <a href='#aocSendGroupDataset'>aocSendGroupDataset</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_BUDDY_TEMPORARY'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_BUDDY_TEMPORARY <span class='cstr'>&quot;\0&quot;</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Used in buddy packet blobs to indicate a temporary buddy.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_BUDDY_PERMANENT'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_BUDDY_PERMANENT <span class='cstr'>&quot;\1&quot;</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Used in buddy packet blobs to indicate a permanent buddy.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STAT_DISCONNECTED'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STAT_DISCONNECTED <span class='cnum'>0</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Connection status constant used in the <a href='#aocConnection'>aocConnection</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STAT_CONNECTING'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STAT_CONNECTING <span class='cnum'>1</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Connection status constant used in the <a href='#aocConnection'>aocConnection</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STAT_CONNECTED'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STAT_CONNECTED <span class='cnum'>2</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Connection status constant used in the <a href='#aocConnection'>aocConnection</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_POLL_READ'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_POLL_READ <span class='cnum'>0x01</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Read flag. Returned from <a href='#aocPollQuery'>aocPollQuery</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_POLL_WRITE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_POLL_WRITE <span class='cnum'>0x02</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Write flag. Returned from <a href='#aocPollQuery'>aocPollQuery</a>.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_EVENT_CONNECT'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_EVENT_CONNECT <span class='cnum'>0</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Event type: Connection established.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_EVENT_CONNFAIL'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_EVENT_CONNFAIL <span class='cnum'>1</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Event type: Connection failed.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_EVENT_DISCONNECT'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_EVENT_DISCONNECT <span class='cnum'>2</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Event type: Disconnnect.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_EVENT_MESSAGE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_EVENT_MESSAGE <span class='cnum'>3</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Event type: Packet received and translated to an <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_EVENT_UNHANDLED'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_EVENT_UNHANDLED <span class='cnum'>4</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Event type: An unhandled, unprocessed, or invalid packet was received.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_EVENT_TIMER'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_EVENT_TIMER <span class='cnum'>5</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Event type: Timer triggered.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TYPE_WORD'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TYPE_WORD <span class='cnum'>0</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Type of data. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TYPE_INTEGER'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TYPE_INTEGER <span class='cnum'>1</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Type of data. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TYPE_STRING'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TYPE_STRING <span class='cnum'>2</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Type of data. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TYPE_GROUPID'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TYPE_GROUPID <span class='cnum'>3</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Type of data. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_TYPE_ARRAYSIZE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_TYPE_ARRAYSIZE <span class='cnum'>4</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Type of data. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STACK_LIFO'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STACK_LIFO <span class='cnum'>0</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Last In, First Out stack type.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_STACK_FIFO'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_STACK_FIFO <span class='cnum'>1</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+First In, First Out stack type.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_LOGIN_SEED'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_LOGIN_SEED <span class='cnum'>0</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent immediately after a connection has been established.<br />
+The application should reply with a <a href='#AOC_CLI_LOGIN_RESPONSE'>AOC_CLI_LOGIN_RESPONSE</a> packet.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = binary_strlen<b>(</b>Seed<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;Seed</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_LOGIN_OK'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_LOGIN_OK <span class='cnum'>5</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent in reply to <a href='#AOC_CLI_LOGIN_RESPONSE'>AOC_CLI_LOGIN_RESPONSE</a> if the login was successful.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre>/* No arguments */</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_LOGIN_ERROR'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_LOGIN_ERROR <span class='cnum'>6</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent in reply to <a href='#AOC_CLI_LOGIN_RESPONSE'>AOC_CLI_LOGIN_RESPONSE</a> if the login was unsuccessful.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = binary_strlen<b>(</b>ErrorMessage<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;ErrorMessage</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_LOGIN_CHARLIST'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_LOGIN_CHARLIST <span class='cnum'>7</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent after a successful login.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_WORD'>AOC_TYPE_WORD</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>2</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;ArraySize
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[1..n] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[1..n] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[1..n] = &amp;UserID
+
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[n] = <a href='#AOC_TYPE_WORD'>AOC_TYPE_WORD</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[n] = <span class='cnum'>2</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[n] = &amp;ArraySize
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[n..n] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[n..n] = binary_strlen<b>(</b>CharacterName<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[n..n] = &amp;CharacterName
+
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[n] = <a href='#AOC_TYPE_WORD'>AOC_TYPE_WORD</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[n] = <span class='cnum'>2</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[n] = &amp;ArraySize
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[n..n] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[n..n] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[n..n] = &amp;CharacterLevel
+
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[n] = <a href='#AOC_TYPE_WORD'>AOC_TYPE_WORD</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[n] = <span class='cnum'>2</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[n] = &amp;ArraySize
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[n..n] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[n..n] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[n..n] = &amp;OnlineStatus     /* <span class='cnum'>1</span> = Online, <span class='cnum'>0</span> = Offline */</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_CLIENT_UNKNOWN'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_CLIENT_UNKNOWN <span class='cnum'>10</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_CLIENT_NAME'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_CLIENT_NAME <span class='cnum'>20</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent to inform the client of a character's UserID.<br />
+<br />
+Example:<br />
+If you receive a private message from UserID 9137589138, most likely
+you have no idea who that is, so the server sends this packet before
+it sends the private message packet to inform you of UserID 9137589138's character name.<br />
+<br />
+This packet is only sent once for every UserID, so if you have previously
+received a tell from UserID 9137589138 you will not get this packet again, for this UserID.<br />
+The server keeps track of which UserIDs the client knows.<br />
+<br />
+The application should cache the UserID and CharacterName. The <a href='#aocNameListNew'>aocNameListNew</a>,
+<a href='#aocNameListInsert'>aocNameListInsert</a>, etc.. functions will help you do that in a very efficent way.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = binary_strlen<b>(</b>CharacterName<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;CharacterName</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_LOOKUP_RESULT'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_LOOKUP_RESULT <span class='cnum'>21</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent in reply to <a href='#AOC_CLI_NAME_LOOKUP'>AOC_CLI_NAME_LOOKUP</a> packets.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = binary_strlen<b>(</b>CharacterName<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;CharacterName</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_USER_FLAGS'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_USER_FLAGS <span class='cnum'>22</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_MSG_PRIVATE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_MSG_PRIVATE <span class='cnum'>30</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent when you received a private message. (Also known as a "tell")<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = binary_strlen<b>(</b>Text<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;Text
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>2</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>2</span>] = binary_strlen<b>(</b>Blob<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>2</span>] = &amp;Blob</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_MSG_VICINITY'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_MSG_VICINITY <span class='cnum'>34</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = binary_strlen<b>(</b>Text<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;Text
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>2</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>2</span>] = binary_strlen<b>(</b>Blob<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>2</span>] = &amp;Blob</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_MSG_ANONVICINITY'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_MSG_ANONVICINITY <span class='cnum'>35</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = binary_strlen<b>(</b>Sender<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;Sender
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = binary_strlen<b>(</b>Text<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;Text
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>2</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>2</span>] = binary_strlen<b>(</b>Blob<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>2</span>] = &amp;Blob</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_MSG_SYSTEM'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_MSG_SYSTEM <span class='cnum'>36</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+System message.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = binary_strlen<b>(</b>SystemMessage<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;SystemMessage</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_BUDDY_STATUS'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_BUDDY_STATUS <span class='cnum'>40</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+Informs the client about a buddy's online status.<br />
+This packet is sent for every buddy in your list when you log in,
+when you add a new buddy, and when a buddy logs on or off.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;OnlineStatus      /* <span class='cnum'>1</span> = Online, <span class='cnum'>0</span> = Offline */
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>2</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>2</span>] = binary_strlen<b>(</b>Blob<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>2</span>] = &amp;Blob</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_BUDDY_REMOVED'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_BUDDY_REMOVED <span class='cnum'>41</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent in reply to <a href='#AOC_CLI_BUDDY_REMOVE'>AOC_CLI_BUDDY_REMOVE</a> packets.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_PRIVGRP_INVITE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_PRIVGRP_INVITE <span class='cnum'>50</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_PRIVGRP_KICK'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_PRIVGRP_KICK <span class='cnum'>51</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_PRIVGRP_PART'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_PRIVGRP_PART <span class='cnum'>53</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_PRIVGRP_CLIJOIN'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_PRIVGRP_CLIJOIN <span class='cnum'>55</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;pUserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_PRIVGRP_CLIPART'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_PRIVGRP_CLIPART <span class='cnum'>56</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;pUserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;UserID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_PRIVGRP_MSG'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_PRIVGRP_MSG <span class='cnum'>57</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;pUserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;UserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>2</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>2</span>] = binary_strlen<b>(</b>Text<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>2</span>] = &amp;Text
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>3</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>3</span>] = binary_strlen<b>(</b>Blob<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>3</span>] = &amp;Blob</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_GROUP_JOIN'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_GROUP_JOIN <span class='cnum'>60</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent when you join a server group.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_GROUPID'>AOC_TYPE_GROUPID</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>5</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;GroupID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = binary_strlen<b>(</b>GroupName<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;GroupName
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>2</span>] = <a href='#AOC_TYPE_WORD'>AOC_TYPE_WORD</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>2</span>] = <span class='cnum'>2</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>2</span>] = &amp;Mute         /* Either <a href='#AOC_GROUP_MUTE'>AOC_GROUP_MUTE</a> or <a href='#AOC_GROUP_UNMUTE'>AOC_GROUP_UNMUTE</a> */
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>3</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>3</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>3</span>] = &amp;Unknown</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_GROUP_PART'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_GROUP_PART <span class='cnum'>61</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent when you part a server group.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_GROUPID'>AOC_TYPE_GROUPID</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>5</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;GroupID</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_GROUP_MSG'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_GROUP_MSG <span class='cnum'>65</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+This packet is sent when someone says something in a group.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_GROUPID'>AOC_TYPE_GROUPID</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = <span class='cnum'>5</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;GroupID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>1</span>] = <a href='#AOC_TYPE_INTEGER'>AOC_TYPE_INTEGER</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>1</span>] = <span class='cnum'>4</span>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>1</span>] = &amp;UserID
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>2</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>2</span>] = binary_strlen<b>(</b>Text<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>2</span>] = &amp;Text
+
+<a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>3</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>3</span>] = binary_strlen<b>(</b>Blob<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>3</span>] = &amp;Blob</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_PONG'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_PONG <span class='cnum'>100</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+<div class='codebar'><b>Argument values in aocMessage</b></div>
+<div class='brk'></div>
+<pre><a href='#aocMessage'>aocMessage</a>-&gt;argt[<span class='cnum'>0</span>] = <a href='#AOC_TYPE_STRING'>AOC_TYPE_STRING</a>
+<a href='#aocMessage'>aocMessage</a>-&gt;argl[<span class='cnum'>0</span>] = binary_strlen<b>(</b>Blob<b>)</b>
+<a href='#aocMessage'>aocMessage</a>-&gt;argv[<span class='cnum'>0</span>] = &amp;Blob</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_FORWARD'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_FORWARD <span class='cnum'>110</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+Not processed by libaochat.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_SRV_AMD_MUX_INFO'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_SRV_AMD_MUX_INFO <span class='cnum'>1100</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Server packet type constant. Used in the <a href='#aocMessage'>aocMessage</a> structure.<br />
+<br />
+Not processed by libaochat.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_LOGIN_RESPONSE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_LOGIN_RESPONSE <span class='cnum'>2</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_LOGIN_SELCHAR'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_LOGIN_SELCHAR <span class='cnum'>3</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_NAME_LOOKUP'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_NAME_LOOKUP <span class='cnum'>21</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_USER_FLAGS'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_USER_FLAGS <span class='cnum'>22</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_MSG_PRIVATE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_MSG_PRIVATE <span class='cnum'>30</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_BUDDY_ADD'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_BUDDY_ADD <span class='cnum'>40</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_BUDDY_REMOVE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_BUDDY_REMOVE <span class='cnum'>41</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_ONLINE_STATUS'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_ONLINE_STATUS <span class='cnum'>42</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_PRIVGRP_INVITE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_PRIVGRP_INVITE <span class='cnum'>50</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_PRIVGRP_KICK'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_PRIVGRP_KICK <span class='cnum'>51</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_PRIVGRP_JOIN'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_PRIVGRP_JOIN <span class='cnum'>52</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_PRIVGRP_KICKALL'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_PRIVGRP_KICKALL <span class='cnum'>54</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_PRIVGRP_MSG'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_PRIVGRP_MSG <span class='cnum'>57</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_GROUP_DATASET'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_GROUP_DATASET <span class='cnum'>64</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_GROUP_MESSAGE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_GROUP_MESSAGE <span class='cnum'>65</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_GROUP_CLIMODE'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_GROUP_CLIMODE <span class='cnum'>66</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_CLIMODE_GET'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_CLIMODE_GET <span class='cnum'>70</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_CLIMODE_SET'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_CLIMODE_SET <span class='cnum'>71</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_PING'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_PING <span class='cnum'>100</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='AOC_CLI_CHAT_COMMAND'></a>
+<div class='funcbar'><span class='cdef'>#define</span> AOC_CLI_CHAT_COMMAND <span class='cnum'>120</span> </div>
+<div class='brk'></div>
+<div class='funcinf'>
+Client packet type constant.<br />
+<br />
+</div>
+</div>
+<br /><br /><br />
+
+
+
+<hr class='separator' />
+
+<div>
+<h1>Structures</h1><br />
+<br />
+</div>
+
+<div>
+<a name='aocTellQueue'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocTellQueue</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocTellQueue'>aocTellQueue</a> <a href='#aocTellQueue'>aocTellQueue</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocTellQueue'>aocTellQueue</a>
+{
+  <a href='#aocStack'>aocStack</a>        *tell;      /* tell queue stack */
+  <a href='#aocStack'>aocStack</a>        *lookup;    /* name lookup stack */
+  <a href='#aocHashList'>aocNameList</a>     *namelist;  /* name list hash table */
+  <a href='#aocHashList'>aocNameList</a>     *badlist;   /* list of charnames that don't exist */
+  <span class='ckey'>int</span>             nlcount;    /* name lookup counter */
+  <span class='ckey'>int</span>             nlwait;     /* ticks waiting for name lookup result */
+  <span class='ckey'>int</span>             burst;      /* burst */
+  <span class='ckey'>struct</span> timeval  interval;   /* interval between tells */
+  <span class='ckey'>struct</span> timeval  tv;         /* time of last sent tell */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocTell'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocTell</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocTell'>aocTell</a> <a href='#aocTell'>aocTell</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocTell'>aocTell</a>
+{
+    <span class='ckey'>char</span> name[<a href='#AOC_MAX_NAME_LEN'>AOC_MAX_NAME_LEN</a>+<span class='cnum'>1</span>];
+    <span class='ckey'>int</span> text_len;
+    <span class='ckey'>char</span> *text;
+    <span class='ckey'>int</span> blob_len;
+    <span class='ckey'>unsigned</span> <span class='ckey'>char</span> *blob;
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocConnection'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocConnection</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocConnection'>aocConnection</a> <a href='#aocConnection'>aocConnection</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocConnection'>aocConnection</a>
+{
+  <span class='ckey'>int</span>            socket;             /* socket file descriptor */
+  <span class='ckey'>int</span>            status;             /* connection status <b>(</b>one of AOC_STAT_*<b>)</b> */
+  <span class='ckey'>int</span>            selchar_done;       /* whether an <a href='#AOC_CLI_LOGIN_SELCHAR'>AOC_CLI_LOGIN_SELCHAR</a> packet has been sent */
+
+  <span class='ckey'>int</span>            read_buf_size;      /* size of read_buf */
+  <span class='ckey'>int</span>            read_buf_len;       /* amount of data in read_buf */
+  <span class='ckey'>unsigned</span> <span class='ckey'>char</span>  *read_buf;          /* recv buffer */
+
+  <a href='#aocSendQueue'>aocSendQueue</a>   *send_queue;        /* send queue list */
+  <a href='#aocSendQueue'>aocSendQueue</a>   *send_queue_last;   /* last node in send queue list */
+
+  <a href='#aocEventQueue'>aocEventQueue</a>  *event_queue;       /* event queue list */
+  <a href='#aocEventQueue'>aocEventQueue</a>  *event_queue_last;  /* last node event queue list */
+
+  <span class='ckey'>int</span>            send_bw_limit;      /* outgoing bandwidth limit in bytes/sec */
+  <span class='ckey'>int</span>            send_bw_remain;     /* bandwidth left to use <b>(</b>this second<b>)</b> */
+
+  <a href='#aocTellQueue'>aocTellQueue</a>   tq;
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocMessage'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocMessage</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocMessage'>aocMessage</a> <a href='#aocMessage'>aocMessage</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocMessage'>aocMessage</a>
+{
+  <span class='ckey'>int</span>   type;    /* type of packet */
+  <span class='ckey'>int</span>   argc;    /* argument count */
+  <span class='ckey'>int</span>   *argt;   /* argument types */
+  <span class='ckey'>int</span>   *argl;   /* argument length */
+  <span class='ckey'>void</span>  **argv;  /* argument values */
+  <span class='ckey'>void</span>  *data;   /* packet data <b>(</b>might be modified, read docs<b>)</b> */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocEvent'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocEvent</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocEvent'>aocEvent</a> <a href='#aocEvent'>aocEvent</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocEvent'>aocEvent</a>
+{
+  <span class='ckey'>int</span>   type;   /* type of event */
+  <span class='ckey'>void</span>  *data;  /* data, depends on event type */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocEventQueue'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocEventQueue</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocEventQueue'>aocEventQueue</a> <a href='#aocEventQueue'>aocEventQueue</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocEventQueue'>aocEventQueue</a>
+{
+  <a href='#aocEventQueue'>aocEventQueue</a>  *next;   /* next event */
+  <a href='#aocEvent'>aocEvent</a>       *event;  /* event <span class='ckey'>struct</span> */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocPacket'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocPacket</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocPacket'>aocPacket</a> <a href='#aocPacket'>aocPacket</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocPacket'>aocPacket</a>
+{
+  <span class='ckey'>int</span>            size;   /* malloc<b>(</b><b>)</b>'ed size */
+  <span class='ckey'>int</span>            pos;    /* position in data <b>(</b>used by the aocPop* functions<b>)</b> */
+  <span class='ckey'>int</span>            len;    /* length of data */
+  <span class='ckey'>int</span>            type;   /* packet type */
+  <span class='ckey'>unsigned</span> <span class='ckey'>char</span>  *data;  /* packet header <b>(</b><span class='cnum'>4</span> bytes<b>)</b> and packet body */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocSendQueue'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocSendQueue</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocSendQueue'>aocSendQueue</a> <a href='#aocSendQueue'>aocSendQueue</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocSendQueue'>aocSendQueue</a>
+{
+  <a href='#aocSendQueue'>aocSendQueue</a>   *next;    /* next queued packet */
+  <span class='ckey'>int</span>            len;      /* length of data */
+  <span class='ckey'>int</span>            sent;     /* bytes sent */
+  <span class='ckey'>unsigned</span> <span class='ckey'>char</span>  *packet;  /* data */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocHashNode'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocHashNode</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocHashNode'>aocHashNode</a> <a href='#aocHashNode'>aocHashNode</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocHashNode'>aocHashNode</a>
+{
+  <a href='#aocHashNode'>aocHashNode</a>  *next;                     /* next node */
+  uint32_t     key;                       /* key */
+  <span class='ckey'>int</span>          which;                     /* key generated from uid<b>(</b><span class='cnum'>0</span><b>)</b> or name<b>(</b><span class='cnum'>1</span><b>)</b>? */
+  uint32_t     uid;
+  <span class='ckey'>char</span>         name[<a href='#AOC_MAX_NAME_LEN'>AOC_MAX_NAME_LEN</a>+<span class='cnum'>1</span>];
+  <span class='ckey'>void</span>         *data;                     /* user data */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocHashTable'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocHashTable</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocHashTable'>aocHashTable</a> <a href='#aocHashTable'>aocHashTable</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocHashTable'>aocHashTable</a>
+{
+  <span class='ckey'>int</span>   size;    /* size of node array */
+  <span class='ckey'>void</span>  **node;  /* node array */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocGroupList'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocGroupList</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocGroupList'>aocGroupList</a> <a href='#aocGroupList'>aocGroupList</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocGroupList'>aocGroupList</a>
+{
+  <a href='#aocGroupList'>aocGroupList</a>   *next;           /* next group in list */
+  <span class='ckey'>unsigned</span> <span class='ckey'>char</span>  group_id[<span class='cnum'>5</span>];     /* group id */
+  <span class='ckey'>char</span>           group_name[<span class='cnum'>32</span>];  /* group name */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocStack'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocStack</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocStack'>aocStack</a> <a href='#aocStack'>aocStack</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocStack'>aocStack</a>
+{
+  <span class='ckey'>int</span>   type;
+  <span class='ckey'>int</span>   si;     /* stack idx <b>(</b>used in FIFO stacks<b>)</b> */
+  <span class='ckey'>int</span>   sp;     /* stack ptr */
+  <span class='ckey'>int</span>   ss;     /* stack size */
+  <span class='ckey'>void</span>  **ptr;
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+<div>
+<a name='aocTimer'></a>
+<div class='funcbar'><span class='ckey'>struct</span> aocTimer</div>
+<div class='brk'></div>
+<div class='funcinf'>
+<div class='codebar'><b>Code</b></div>
+<div class='brk'></div>
+<pre><span class='ckey'>typedef</span> <span class='ckey'>struct</span> _<a href='#aocTimer'>aocTimer</a> <a href='#aocTimer'>aocTimer</a>;
+
+<span class='ckey'>struct</span> _<a href='#aocTimer'>aocTimer</a>
+{
+  <a href='#aocTimer'>aocTimer</a>        *prev;      /* previous timer in chain */
+  <a href='#aocTimer'>aocTimer</a>        *next;      /* next timer in chain */
+  <a href='#aocConnection'>aocConnection</a>   *aoc;       /* associated connection */
+  <span class='ckey'>int</span>             id;         /* user defined timer ID */
+  <span class='ckey'>int</span>             underruns;  /* # of underruns */
+  <span class='ckey'>struct</span> timeval  interval;   /* interval */
+  <span class='ckey'>struct</span> timeval  tv;         /* next trigger time */
+};
+
+
+</pre>
+</div>
+</div>
+<br /><br /><br />
+
+</div>
+</body>
+</html>

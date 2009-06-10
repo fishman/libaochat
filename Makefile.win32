@@ -1,0 +1,26 @@
+CC = cl
+CFLAGS = /nologo /G5 /D__COMPILING_LIB
+LDFLAGS = /LD /ML /link /NOLOGO /DEF:aochat.def \
+	"/LIBPATH:C:\Program Files\Microsoft Visual Studio .NET\Vc7\lib" \
+	"/LIBPATH:C:\Program Files\Microsoft Visual Studio .NET\Vc7\PlatformSDK\lib" \
+	wsock32.lib advapi32.lib libeay32.lib  #uncomment for gmp: libgmp.lib
+
+LIBS = connect.obj event.obj list.obj keyex.obj misc.obj packet.obj \
+		send_queue.obj timer.obj tell_queue.obj
+LIB = aochat.dll
+
+all: $(LIB)
+
+$(LIB): $(LIBS)
+	$(CC) /Fe$(LIB) $(LIBS) $(LDFLAGS)
+
+.c:
+	$(CC) $(CFLAGS) /c $<
+
+clean:
+	@del *.obj $(LIB)
+
+distclean: clean
+
+# depend
+*.obj: Makefile.win32 aochat.h win32autoconf.h

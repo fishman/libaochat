@@ -1,0 +1,76 @@
+body {
+	color: black;
+	background: white;
+	margin: 20px 20px 0 20px;
+	font-family: verdana, helvetica, sans-serif;
+	font-weight: normal;
+	font-size: 8pt;
+}
+
+a		{ color: #005F00; text-decoration: none; }
+a:hover	{ text-decoration: underline; }
+h1,h2	{ margin: 0; }
+h1		{ font-size: 16pt; }
+h2		{ font-size: 10pt; }
+.ckey	{ color: #00009F; font-weight: bold; }
+.cstr	{ color: #9F009F; }
+.cnum	{ color: #009F9F; }
+.cdef	{ color: #9F9F00; }
+div.brk { clear: left; }
+i		{ font-weight: bold; }
+
+table td {
+	vertical-align: top;
+}
+
+table h1,h2 {
+	margin: 0;
+	margin-top: 20pt;
+}
+
+hr.separator {
+	margin-top: 40pt;
+	margin-bottom: 40pt;
+}
+
+div.indent {
+	margin: 0;
+	margin-left: 10pt;
+}
+
+div.codebar {
+	background: white;
+	border: 1px solid #CFCFCF;
+	border-bottom: 0;
+	margin: 2px;
+	padding: 2px;
+	top: 3px;
+	left: 8px;
+	position: relative;
+	float: left;
+}
+
+pre {
+	background: white;
+	color: black;
+	border: 1px solid #CFCFCF;
+	margin: 2px;
+	padding: 10px 10px 10px 10px;
+}
+
+div.funcbar {
+	background: #F7F7F7;
+	border: 1px solid #9F9F9F;
+	border-bottom: 0;
+	padding: 2px;
+	font-size: 10pt;
+	top: 1px;
+	position: relative;
+	float: left;
+}
+
+div.funcinf {
+	background: #F7F7F7;
+	border: 1px solid #9F9F9F;
+	padding: 4px;
+}

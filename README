@@ -1,0 +1,96 @@
+                                   README
+
+                                libaochat
+                               Version 1.1.0
+
+==============================================================================
+What is libaochat and what are it's features?
+==============================================================================
+libaochat is a free Anarchy Online Chat library for Unix, Linux and Windows.
+It is written in C and licensed under the GNU General Public License.
+(Note: That's GPL, not LGPL! You can't link this library with closed source
+ software. Why? Because keyex.c is licensed under GPL. If the author [auno]
+ decides to change the license of keyex.c to LGPL or the BSD license I will
+ also change the license of libaochat.)
+
+libaochat features:
+* Easy to use polling functions
+* Asynchronous socket I/O
+* Automatic send queueing
+* Outgoing bandwidth/packet rate limiting
+* Timer functions
+* Stack functions (FIFO and LIFO)
+* Hash table functions designed for fast UserID <-> CharName lookups
+* Lookup table functions designed for GroupID <-> GroupName lookups
+* Per connection event system
+* Various utility functions
+* Cheezy documentation
+
+For information about Anarchy Online please see http://www.anarchyonline.com/
+
+For more detailed info about exported library functions and the Anarchy Online
+chat protocol please read see the aochat.html in the docs directory.
+
+
+==============================================================================
+Compiling and installing the library on Unix and Linux
+==============================================================================
+$ ./configure
+$ make
+$ su -c "make install"
+Password: (enter your root password)
+
+The library (libaochat.so.1.1.0) will be installed in /usr/local/lib/
+The header file (aochat.h) will be installed in /usr/local/include/
+
+Example programs can be found in in the 'examples' directory.
+
+
+==============================================================================
+Compiling and installing the library on MS Windows (stand-alone)
+==============================================================================
+You're going to need Microsoft's Visual Studio .NET C/C++ compiler (or another
+win32 compiler, but that's what I used), some coding knowledge, and a properly
+compiled GMP or OpenSSL library. You will also need to edit the
+files win32autoconf.h, and Makefile.win32.
+
+C:\libaochat-1.1.0\> nmake /f Makefile.win32
+C:\libaochat-1.1.0\> copy aochat.dll c:\windows\system32
+
+You will also need to copy the aochat.lib and aochat.h files to your
+library and include directory respectively. :p
+
+
+==============================================================================
+Supported platforms
+==============================================================================
+libaochat is known to compile on the following platforms:
+
+  FreeBSD 4.9-PRERELEASE (i386)
+  Linux 2.2/2.4/2.6 (i386, alpha, amd64)
+  NetBSD 1.6.1 (i386)
+  Windows 2000 (i386)
+
+Thanks to sourceforge for their excellent compile farm.
+
+
+==============================================================================
+Known problems
+==============================================================================
+None.
+
+
+==============================================================================
+Thanks to...
+==============================================================================
+o Oskari Saarenmaa <pickett at sumu.org>
+  http://auno.org/ao/chat/
+  Diffie Hellman code, packet types, etc.. (keyex.c)
+
+
+==============================================================================
+Reporting bugs, security problems, suggestions, feature requests...
+==============================================================================
+Email me at dinkles@tty0.org.
+
+I may not reply to all emails, but I will most definately read all of them.

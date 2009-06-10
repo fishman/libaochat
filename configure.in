@@ -1,0 +1,59 @@
+AC_INIT(libaochat, 1.1.0)
+AM_INIT_AUTOMAKE(libaochat, 1.1.0)
+AC_CONFIG_HEADER(autoconf.h)
+
+# Checks for programs
+AC_PROG_AWK
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_RANLIB
+AC_LIBTOOL_DLOPEN
+AM_PROG_LIBTOOL
+
+# Checks for headers
+AC_HEADER_STDC
+AC_CHECK_HEADERS(unistd.h openssl/bn.h gmp.h)
+
+if test "$ac_cv_header_openssl_bn_h" = "yes"; then
+AC_CHECK_LIB(crypto, BN_mod_exp)
+fi
+if test "$ac_cv_header_gmp_h $ac_cv_lib_crypto_BN_mod_exp" = "yes no"; then
+AC_CHECK_LIB(gmp, __gmp_asprintf)
+fi
+
+dnl mr. autoconf n00b was here
+
+if test "$ac_cv_header_openssl_bn_h $ac_cv_lib_crypto_BN_mod_exp" != "yes yes"; then
+  if test "$ac_cv_header_gmp_h $ac_cv_lib_gmp___gmp_asprintf" != "yes yes"; then
+	AC_MSG_ERROR([
+libaochat requires one of the following libraries and headers:
+
+OpenSSL BIGNUM header (openssl/bn.h) and libssl/libcrypto with BN_mod_exp()
+  http://www.openssl.org/ (recommended)
+
+or..
+
+GNU MP header (gmp.h) and libgmp with __gmp_asprintf()
+  http://swox.com/gmp/
+])
+  fi
+fi
+
+
+# Checks for various functions
+AC_CHECK_FUNCS(inet_aton snprintf vsnprintf)
+AC_CHECK_FUNC(gethostbyname, , AC_CHECK_LIB(nsl, gethostbyname))
+AC_CHECK_FUNC(socket, , AC_CHECK_LIB(socket, socket))
+
+# Checks for typedefs, etc..
+AC_C_CONST
+AC_TYPE_SIZE_T
+dnl AC_HEADER_TIME
+dnl AC_CHECK_SIZEOF(short, 0)
+dnl AC_CHECK_SIZEOF(long, 0)
+dnl AC_CHECK_SIZEOF(long long, 0)
+dnl AC_CHECK_SIZEOF(int, 0)
+
+# Output the Makefile
+AC_OUTPUT(Makefile)

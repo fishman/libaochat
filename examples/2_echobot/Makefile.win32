@@ -1,0 +1,24 @@
+CC = cl
+CFLAGS = /nologo /G5
+LDFLAGS = /ML /link /NOLOGO \
+	"/LIBPATH:C:\Program Files\Microsoft Visual Studio .NET\Vc7\lib" \
+	"/LIBPATH:C:\Program Files\Microsoft Visual Studio .NET\Vc7\PlatformSDK\lib" \
+	aochat.lib wsock32.lib
+LIBS = main.obj
+EXE = echobot.exe
+
+all: $(EXE)
+
+$(EXE): $(LIBS)
+	$(CC) /Fe$(EXE) $(LIBS) $(LDFLAGS)
+
+.c:
+	$(CC) $(CFLAGS) /c $<
+
+clean:
+	@del *.obj $(EXE)
+
+distclean: clean
+
+# depend
+*.obj: Makefile.win32

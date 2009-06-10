@@ -1,0 +1,97 @@
+Sat Jan 17 19:22:40 CET 2004 - 1.1.0-rc4
+----------------------------------------
+* docs/group_id.txt describes GroupIDs
+* New "example", examples/3_skel (skeleton) [not finished in rc4!]
+* aocTellQueue has been replaced by aocMsgQueue.
+* NEW: Packet rate limiter. aocSetPref(AOC_PREF_PKTLIMIT, (void *)20);
+* The event queue has been redesigned and simplified. All connections
+  now share the same event queue, and you can add your own events with
+  aocEventAdd().
+* aocConnections now have a user data union called 'udata'
+* NEW: (aocHashList *)->count = number of nodes in table.
+* NEW: New packet type: AOC_TYPE_RAW. (raw binary data)
+* NEW: AOC_SRV_FORWARD and AOC_SRV_AMD_MUX_INFO packets are now supported.
+  AOC_SRV_FORWARD is decoded as "r" [Unknown(raw)]
+  AOC_SRV_AMD_MUX_INFO is decoded as "III" [Array(int) Array(int) Array(int)]
+* moo_trand() now uses rand() to further randomize it's data
+* AOC_SRV_GROUP_JOIN packets are now decoded as "gswws" [grpid str wrd wrd str]
+* Lots of small changes, code cleanups, etc...
+* Bumped library version to 2.0.0.
+* Updated the documentation...
+
+Thu Jan 15 16:21:08 CET 2004 - 1.0.5
+------------------------------------
+* Fixed a bug in aocPushString()
+* The tell queue will now destroy it's timer when the queue is empty.
+* aocPush*(), aocPacketInit(), and aocPacketSend() are now defined
+  in the header file. These functions can be used to create custom packets.
+* aocReadPacket() has been rewritten, and is now more efficient.
+* Removed printf() spam from aocSendChatCommand :P
+* NEW: aocDecodeBlob(), aocNameListSetDataByName(),
+  aocNameListSetDataByUID().
+* Timers are aligned on 25ms intervals.
+* Timers inserts are on average 50% faster.
+* Fixed memory leak in tell queue.
+* Prevent 0 size malloc in tell queue.
+* The 'received packet' debug msg was reporting the wrong packet length.
+* The EINTR signal is ignored on recv()/send().
+* Minor cleanups...
+
+Thu Oct 30 15:04:55 CET 2003 - 1.0.4
+------------------------------------
+* Fixed a send queue bug which I fixed in 1.0.0 but somehow
+  I must have managed to overwrite it with an older copy. :/
+* NEW: aocMakeItemBlob(), aocMakeBlob()
+* Updated the documentation...
+
+Sun Oct 26 12:10:20 CEST 2003 - 1.0.3
+-------------------------------------
+* FIX: Group IDs are now declared as unsigned char * everywhere. Really.
+* BUG: aocSendChatCommand() was not pushing the array size.
+* Changed function paramters to const where possible.
+* Fixed a recv() issue with WSAASyncSelect() (bug?) [Windows]
+* Cleaned up aocMakeWndBlob()
+* FIX: Charnames sent to the server are now trimmed. (aocSendNameLookup())
+* NEW: aocNameTrim() - trims up to 128 bytes of a string (incl. NULL),
+                       returns a static pointer.
+* aocNameLowerCase() now converts up to 128 bytes. (incl. NULL)
+* Updated the 1_charlist and windows_polling examples.
+* Updated the documentation.
+
+Wed Oct 22 00:36:15 CEST 2003 - 1.0.2
+-------------------------------------
+* BUG: Use OPENSSL_free on pointers returned from BN_bn2hex()
+* FIX: New function: aocFree() - this must be used when freeing
+       memory pointers returned by libaochat functions.
+       Ie. from aocKeyexGenerateKey(), aocInit(NULL), and aocMemDup()
+       Using free() instead of aocFree() can corrupt the heap.
+* BUG: Fixed a bug in the win32gendef.sh script that prevented
+       some functions from being listed. [Windows]
+* Updated the documentation.
+* NEW: Added win32 support & makefiles for example 1 and 2. [Windows]
+* The library has been tested under the following platforms:
+  FreeBSD 4.9-PRERELEASE (i386)
+  Linux 2.2 (i386, alpha64)
+  Linux 2.4 (amd64)
+  Linux 2.6 (i386)
+  NetBSD 1.6.1 (i386)
+  Windows 2000 (i386)
+* FIX: Check for BN_mod_exp in -lcrypto rather than -lssl
+* NEW: aocSetPref() preference: AOC_PREF_FASTRND
+
+Fri Oct 17 15:57:56 CEST 2003 - 1.0.1
+-------------------------------------
+* BUG: Fixed stoopid aocSendGroup* groupid bug
+* FIX: Group IDs are now declared as unsigned char * everywhere.
+* Greatly improved the tell queue code.
+* Minor autoconf changes
+* FIX: The HTML doc builder will actually generate valid
+       xhtml/1.0 strict now.
+* FIX: Fixed typos, etc.. in docs
+* FIX: You can now pass -1 as text_len/blob_len to aocTellQueueAdd()
+
+Mon Oct 06 23:25:52 CEST 2003 - 1.0.0
+-------------------------------------
+* First public release :)
+
+

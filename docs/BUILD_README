@@ -1,0 +1,13 @@
+Want to improve the documentation?
+----------------------------------
+tar xvfz build.tar.gz
+cd build
+php -f build.php  ; Generates aochat.html
+
+
+FILES
+-----
+funcmap   - Defines sections, section descriptions,
+            and functions belonging to this section.
+
+./files/* - Function, structure, and #define documentation & code.
