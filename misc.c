@@ -78,6 +78,7 @@ char *aocServerPacketName(int type)
 	case AOC_SRV_VICINITY_MSG:		return "VICINITY_MSG";
 	case AOC_SRV_ANONVICINITY_MSG:	return "ANONVICINITY_MSG";
 	case AOC_SRV_SYSTEM_MSG:			return "SYSTEM_MSG";
+	case AOC_SRV_CHAT_NOTICE:			return "CHAT_NOTICE";
 	case AOC_SRV_BUDDY_STATUS:		return "BUDDY_STATUS";
 	case AOC_SRV_BUDDY_REMOVED:		return "BUDDY_REMOVED";
 	case AOC_SRV_PRIVGRP_INVITE:		return "PRIVGRP_INVITE";

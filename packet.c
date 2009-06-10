@@ -617,6 +617,10 @@ int aocPacketParse(aocConnection *aoc, unsigned char *buf, int len)
 	case AOC_SRV_SYSTEM_MSG:		/* [string] */
 		err = aocPacketDecode(p, m, "s");
 		break;
+		
+	case AOC_SRV_CHAT_NOTICE:		/* [int] [int] [int] [string] */
+		err = aocPacketDecode(p, m, "iiis");
+		break;
 
 	case AOC_SRV_BUDDY_STATUS:		/* [int] [int] [string] */
 		err = aocPacketDecode(p, m, "iis");

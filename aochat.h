@@ -192,6 +192,7 @@
 #define AOC_SRV_VICINITY_MSG		34		/* [int UserID] [string Text] [string Blob] */
 #define AOC_SRV_ANONVICINITY_MSG	35		/* [string] [string Text] [string Blob] */
 #define AOC_SRV_SYSTEM_MSG			36		/* [string Text] */
+#define AOC_SRV_CHAT_NOTICE			37		/* [int] [int] [int] [string] */
 #define AOC_SRV_BUDDY_STATUS		40		/* [int UserID] [int Online] [string Status] */
 #define AOC_SRV_BUDDY_REMOVED		41		/* [int UserID] */
 #define AOC_SRV_PRIVGRP_INVITE		50		/* [int UserID] */
