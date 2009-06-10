@@ -366,7 +366,7 @@ struct _aocHashNode
 
 struct _aocHashTable
 {
-	int		size;		/* size of node array */
+	uint32_t	size;		/* size of node array */
 	void		**node;		/* node array */
 	int		count;		/* number of nodes (items) */
 };
@@ -467,7 +467,7 @@ int aocSendChatCommand(aocConnection *c, const char *command);
 /* list.c */
 aocHashTable *aocNameListNew(int size);
 void aocNameListDestroy(aocHashTable *table);
-int aocNameListInsert(aocHashTable *table, int uid, const char *name, void *data);
+int aocNameListInsert(aocHashTable *table, uint32_t uid, const char *name, void *data);
 void *aocNameListDeleteByName(aocHashTable *table, const char *name);
 void *aocNameListDeleteByUID(aocHashTable *table, uint32_t uid);
 uint32_t aocNameListLookupByName(aocHashTable *table, const char *name, void **data);

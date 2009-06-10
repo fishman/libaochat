@@ -139,7 +139,7 @@ void aocNameListDestroy(aocHashTable *table)
 }
 
 
-int aocNameListInsert(aocHashTable *table, int uid, const char *name, void *data)
+int aocNameListInsert(aocHashTable *table, uint32_t uid, const char *name, void *data)
 {
 	aocHashNode *name_node, *uid_node;
 	uint32_t key;
