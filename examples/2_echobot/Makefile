@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -pipe -O2 -Wall
-LDFLAGS = -L/usr/local/lib -laochat
+LDFLAGS = -L/usr/local/lib ../libaochat.a -lcrypto
 LIBS = main.o
 BIN = echobot
 

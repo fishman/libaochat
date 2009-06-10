@@ -19,7 +19,7 @@
 	#include <sys/socket.h>
 	#include <netdb.h>
 #endif
-#include <aochat.h>
+#include "../aochat.h"
 
 
 int running = 1;
@@ -249,8 +249,8 @@ int main(int argc, char **argv)
 	ao_char = argv[3];
 
 	/* Look up IPv4 address for rimor's chat server */
-	printf("Resolving %s...\n", AOC_SERVER_RK2);
-	addr = aocMakeAddr(AOC_SERVER_RK2, 7012);
+	printf("Resolving %s...\n", AOC_SERVER_RK3);
+	addr = aocMakeAddr(AOC_SERVER_RK3, 7013);
 	if(addr == NULL)
 	{
 		printf("DNS Lookup Failure.\n");
